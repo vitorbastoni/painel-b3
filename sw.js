@@ -4,7 +4,7 @@
    sempre buscados na rede e nunca gravados neste cache. */
 'use strict';
 
-var VERSION = '6';
+var VERSION = '7';
 var SHELL_CACHE = 'painel-b3-shell-v' + VERSION;
 
 var SHELL = [
@@ -17,7 +17,8 @@ var SHELL = [
   'icons/vb-apple-touch.png',
   'icons/vb-favicon.png',
   'icons/vb-favicon.svg',
-  'curva-juros.json'
+  'curva-juros.json',
+  'xlsx-lite.js'
 ];
 
 function isLiveDataHost(hostname) {
