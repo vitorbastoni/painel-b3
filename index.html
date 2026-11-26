@@ -653,13 +653,14 @@
     gap:10px;
     font-size:13.5px;
   }
-  .pos-row{grid-template-columns:1fr 70px 110px 110px 150px 200px;}
+  .pos-row{grid-template-columns:1fr 70px 110px 110px 228px 168px;}
   .pos-retorno-cell{white-space:nowrap;}
   .pos-teto{display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
   .teto-input{width:100px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:12.5px;padding:6px 8px;border-radius:6px;outline:none;text-align:right;}
   .teto-input::placeholder{color:var(--text-dim);}
   .teto-input:focus{border-color:var(--amber);}
   .teto-status{font-family:var(--font-display);font-size:12px;font-weight:500;white-space:nowrap;}
+  .teto-52w{font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--text-dim);line-height:1.35;text-align:right;}
   .tx-row{grid-template-columns:90px 80px 80px 60px 90px 100px 30px;font-family:var(--font-mono);font-size:12.5px;}
   .pos-row:last-child, .tx-row:last-child{border-bottom:none;}
   .pos-head, .tx-head{
@@ -695,6 +696,7 @@
     .pos-row:not(.pos-head) > :nth-child(1){grid-column:1;grid-row:1;font-size:15px;}
     .pos-row:not(.pos-head) > :nth-child(6){grid-column:2 / 4;grid-row:1;text-align:right;font-size:13.5px;}
     .pos-row:not(.pos-head) > :nth-child(5){grid-column:1 / 4;grid-row:3;flex-direction:row;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:4px 10px;}
+    .pos-row:not(.pos-head) > :nth-child(5) .teto-52w{text-align:left;}
     .pos-row:not(.pos-head) > :nth-child(5)::before{content:attr(data-label);font-family:var(--font-mono);font-size:10.5px;font-weight:500;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.06em;}
     .pos-row:not(.pos-head) > :nth-child(2){grid-column:1;grid-row:2;text-align:left;}
     .pos-row:not(.pos-head) > :nth-child(3){grid-column:2;grid-row:2;text-align:left;}
@@ -3424,7 +3426,7 @@ const OptMath = (function(){
     return Array.from(new Set([...watchlist, ...portfolioTickers(), ...ETF_INDEX_CARDS.map(c => c.ticker)]));
   }
 
-  // Campo do preço teto + comparação com o preço atual (verde = abaixo do teto, vermelho = acima).
+  // Campo do preço teto + máxima de 52 semanas já guardada na cotação (sem pedido extra).
   function tetoCell(ticker, price){
     const teto = tetos[ticker];
     let status = '';
@@ -3434,7 +3436,18 @@ const OptMath = (function(){
       else if (diff < 0) status = `<span class="teto-status up">${Math.abs(diff).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}% abaixo do teto</span>`;
       else status = `<span class="teto-status down">${diff.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}% acima do teto</span>`;
     }
-    return `<span class="num pos-teto" data-label="Preço teto"><input type="number" class="teto-input" data-ticker="${esc(ticker)}" placeholder="Teto" step="0.01" min="0" value="${teto > 0 ? esc(teto) : ''}">${status}</span>`;
+    const q = quotes[ticker];
+    const high = (q && typeof q.fiftyTwoWeekHigh === 'number' && q.fiftyTwoWeekHigh > 0) ? q.fiftyTwoWeekHigh : null;
+    let maxima = 'Máx. 52 sem. —';
+    if (high != null){
+      let dist = '';
+      if (price != null && price > 0){
+        const pct = (price / high - 1) * 100;
+        dist = ' · ' + pct.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%';
+      }
+      maxima = 'Máx. 52 sem. ' + fmtMoney(high) + dist;
+    }
+    return `<span class="num pos-teto" data-label="Preço teto"><input type="number" class="teto-input" data-ticker="${esc(ticker)}" placeholder="Teto" step="0.01" min="0" value="${teto > 0 ? esc(teto) : ''}">${status}<span class="teto-52w" title="Máxima de 52 semanas e distância do preço atual">${maxima}</span></span>`;
   }
 
   function renderPortfolio(){
