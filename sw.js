@@ -1,10 +1,10 @@
 /* Painel B3 — casco do aplicativo.
    A página, o manifesto e os ícones ficam em cache para abrir sem rede.
-   Cotações e indicadores (brapi, Banco Central, ANBIMA, BrasilAPI) são
+   Cotações e indicadores (brapi, Banco Central, ANBIMA, BrasilAPI, AwesomeAPI) são
    sempre buscados na rede e nunca gravados neste cache. */
 'use strict';
 
-var VERSION = '3';
+var VERSION = '4';
 var SHELL_CACHE = 'painel-b3-shell-v' + VERSION;
 
 var SHELL = [
@@ -25,6 +25,7 @@ function isLiveDataHost(hostname) {
   if (h === 'brasilapi.com.br' || h.endsWith('.brasilapi.com.br')) return true;
   if (h === 'anbima.com.br' || h.endsWith('.anbima.com.br')) return true;
   if (h === 'bcb.gov.br' || h.endsWith('.bcb.gov.br')) return true;
+  if (h === 'economia.awesomeapi.com.br' || h.endsWith('.awesomeapi.com.br')) return true;
   return false;
 }
 
