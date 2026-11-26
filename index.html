@@ -248,6 +248,12 @@
     font-size:11px;
     color:var(--text-dim);
   }
+  .summary-focus{
+    font-family:var(--font-mono);
+    font-size:11px;
+    line-height:1.35;
+    color:var(--text-dim);
+  }
 
   .add-row{
     display:flex;
@@ -1031,6 +1037,7 @@
           <span class="summary-label">Selic (meta)</span>
           <span class="summary-value" id="selicValue">···</span>
           <span class="summary-range" id="selicRange"></span>
+          <span class="summary-focus" id="selicFocus"></span>
         </div>
         <div class="summary-card">
           <span class="summary-label">CDI (anualizado)</span>
@@ -1038,10 +1045,17 @@
           <span class="summary-range" id="cdiRange"></span>
         </div>
         <div class="summary-card">
+          <span class="summary-label">Poupança</span>
+          <span class="summary-value" id="poupValue">···</span>
+          <span class="summary-range" id="poupRange"></span>
+          <span class="summary-focus" id="poup12"></span>
+        </div>
+        <div class="summary-card">
           <span class="summary-label">Dólar (PTAX)</span>
           <span class="summary-value" id="usdValue">···</span>
           <span class="summary-change" id="usdChange"></span>
           <span class="summary-range" id="usdRange"></span>
+          <span class="summary-focus" id="usdFocus"></span>
         </div>
         <div class="summary-card">
           <span class="summary-label">Dólar futuro (mini)</span>
@@ -1056,14 +1070,27 @@
           <span class="summary-range" id="eurRange"></span>
         </div>
         <div class="summary-card">
+          <span class="summary-label">Ouro (onça troy)</span>
+          <span class="summary-value" id="ouroValue">···</span>
+          <span class="summary-change" id="ouroChange"></span>
+          <span class="summary-range" id="ouroRange"></span>
+        </div>
+        <div class="summary-card">
           <span class="summary-label">IPCA (12 meses)</span>
           <span class="summary-value" id="ipcaValue">···</span>
           <span class="summary-range" id="ipcaRange"></span>
+          <span class="summary-focus" id="ipcaFocus"></span>
         </div>
         <div class="summary-card">
           <span class="summary-label">IGP-M (12 meses)</span>
           <span class="summary-value" id="igpmValue">···</span>
           <span class="summary-range" id="igpmRange"></span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">PIB (Focus)</span>
+          <span class="summary-value" id="pibValue">···</span>
+          <span class="summary-range" id="pibRange"></span>
+          <span class="summary-focus" id="pibNext"></span>
         </div>
       </div>
 
@@ -1660,6 +1687,18 @@ const OptMath = (function(){
   const eurValueEl = document.getElementById('eurValue');
   const eurChangeEl = document.getElementById('eurChange');
   const eurRangeEl = document.getElementById('eurRange');
+  const selicFocusEl = document.getElementById('selicFocus');
+  const usdFocusEl = document.getElementById('usdFocus');
+  const ipcaFocusEl = document.getElementById('ipcaFocus');
+  const poupValueEl = document.getElementById('poupValue');
+  const poupRangeEl = document.getElementById('poupRange');
+  const poup12El = document.getElementById('poup12');
+  const ouroValueEl = document.getElementById('ouroValue');
+  const ouroChangeEl = document.getElementById('ouroChange');
+  const ouroRangeEl = document.getElementById('ouroRange');
+  const pibValueEl = document.getElementById('pibValue');
+  const pibRangeEl = document.getElementById('pibRange');
+  const pibNextEl = document.getElementById('pibNext');
   const viewTableBtn = document.getElementById('viewTableBtn');
   const viewCardsBtn = document.getElementById('viewCardsBtn');
 
@@ -2181,6 +2220,7 @@ const OptMath = (function(){
   const IND_CACHE_KEY = 'painelB3_indicadores_cache_v1';
   const IND_TTL_MS = 6 * 60 * 60 * 1000;   // Selic, CDI, IPCA, IGP-M
   const IND_TTL_FX_MS = 60 * 60 * 1000;    // PTAX (dólar, euro) e dólar futuro
+  const IND_TTL_DAY_MS = 24 * 60 * 60 * 1000; // poupança, ouro e Focus: no máximo 1 vez por dia
   let indCache = null;
   function indLoad(){
     if (indCache) return indCache;
@@ -2192,6 +2232,16 @@ const OptMath = (function(){
   function indValidSgs(d){ return Array.isArray(d) && d.length > 0 && d[0] && typeof d[0].valor === 'string'; }
   function indValidPtax(d){ return !!d && Array.isArray(d.value) && d.value.length > 0; }
   function indValidWdo(d){ return !!d && Array.isArray(d.contracts) && d.contracts.length > 0; }
+  function indValidFocusAnual(d){
+    return !!d && Array.isArray(d.value) && d.value.length > 0 && d.value[0]
+      && typeof d.value[0].Mediana === 'number' && typeof d.value[0].Data === 'string';
+  }
+  function indValidFocus12(d){
+    return !!d && Array.isArray(d.value) && d.value.some(x => x && x.Suavizada === 'N' && typeof x.Mediana === 'number');
+  }
+  function indValidGold(d){
+    return !!d && !!d.XAUBRL && typeof d.XAUBRL.bid === 'string';
+  }
   async function indGetJson(key, url, ttlMs, isValid, force){
     const cache = indLoad();
     const c = cache[key];
@@ -2555,17 +2605,213 @@ const OptMath = (function(){
     }
   }
 
+  function fmtPctPlain(v){
+    return Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '%';
+  }
+  function focusStamp(iso){
+    if (!iso || iso.length < 10) return '';
+    return iso.slice(8, 10) + '/' + iso.slice(5, 7);
+  }
+  function focusPair(rows){
+    if (!rows || !rows.length || !rows[0] || typeof rows[0].Data !== 'string') return null;
+    const data = rows[0].Data;
+    const same = rows.filter(r => r.Data === data);
+    const y = new Date().getFullYear();
+    return {
+      data,
+      y,
+      cur: same.find(r => Number(r.DataReferencia) === y) || null,
+      nxt: same.find(r => Number(r.DataReferencia) === y + 1) || null
+    };
+  }
+  function focusLine(pair, fmt){
+    if (!pair || (!pair.cur && !pair.nxt)) return '';
+    const bits = ['Focus de ' + focusStamp(pair.data)];
+    if (pair.cur) bits.push(pair.y + ' ' + fmt(pair.cur.Mediana));
+    if (pair.nxt) bits.push((pair.y + 1) + ' ' + fmt(pair.nxt.Mediana));
+    return bits.join(' · ');
+  }
+  function focusAnualUrl(indicador){
+    const filter = "Indicador eq '" + indicador + "' and baseCalculo eq 0";
+    return 'https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativasMercadoAnuais'
+      + '?$top=20&$orderby=Data%20desc&$format=json&$select=Indicador,Data,DataReferencia,Mediana,baseCalculo'
+      + '&$filter=' + encodeURIComponent(filter);
+  }
+  async function focusAnual(indicador, force){
+    const data = await indGetJson('focus-' + indicador, focusAnualUrl(indicador), IND_TTL_DAY_MS, indValidFocusAnual, force);
+    return data.value;
+  }
+
+  // Série 25: taxa mensal da poupança vigente em cada aniversário (data → dataFim).
+  // O acumulado de 12 meses compõe 12 taxas com um mês de distância, sem sobrepor o período.
+  function poupParse(s){
+    const p = String(s || '').split('/');
+    if (p.length !== 3) return null;
+    return new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0]));
+  }
+  function poupShiftMonth(date, n){
+    const day = date.getDate();
+    const d = new Date(date.getFullYear(), date.getMonth() + n, 1);
+    const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(day, last));
+    return d;
+  }
+  function poupAccum12(list){
+    const parsed = [];
+    (list || []).forEach(it => {
+      const dt = poupParse(it && it.data);
+      const v = parseFloat(String(it && it.valor || '').replace(',', '.'));
+      if (dt && isFinite(v)) parsed.push({ t: dt.getTime(), v });
+    });
+    if (parsed.length < 12) return null;
+    parsed.sort((a, b) => a.t - b.t);
+    const end = parsed[parsed.length - 1].t;
+    let factor = 1;
+    for (let k = 11; k >= 0; k--){
+      const target = poupShiftMonth(new Date(end), -k).getTime();
+      let best = parsed[0];
+      let bestAbs = Math.abs(parsed[0].t - target);
+      for (let i = 1; i < parsed.length; i++){
+        const abs = Math.abs(parsed[i].t - target);
+        if (abs < bestAbs){ best = parsed[i]; bestAbs = abs; }
+      }
+      if (bestAbs > 5 * 86400000) return null;
+      factor *= (1 + best.v / 100);
+    }
+    return (factor - 1) * 100;
+  }
+  function poupUrl(){
+    const end = new Date();
+    const start = new Date();
+    start.setMonth(start.getMonth() - 13);
+    const fmt = (d) => String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+    return 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.25/dados?formato=json&dataInicial=' + fmt(start) + '&dataFinal=' + fmt(end);
+  }
+  async function fetchPoupanca(force){
+    try{
+      const data = await indGetJson('poupanca', poupUrl(), IND_TTL_DAY_MS, indValidSgs, force);
+      const list = (Array.isArray(data) ? data.slice() : []).sort((a, b) => {
+        const da = poupParse(a && a.data);
+        const db = poupParse(b && b.data);
+        return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+      });
+      const item = list.length ? list[list.length - 1] : null;
+      const val = item ? parseFloat(String(item.valor).replace(',', '.')) : NaN;
+      if (!item || !isFinite(val)){
+        poupValueEl.textContent = '—';
+        poupRangeEl.textContent = 'indisponível';
+        poup12El.textContent = '';
+        return;
+      }
+      poupValueEl.textContent = fmtPctPlain(val) + ' no mês';
+      const ini = item.data || '';
+      const fim = item.dataFim || '';
+      poupRangeEl.textContent = (ini && fim) ? (ini + ' a ' + fim) : (ini ? ('Referência: ' + ini) : '');
+      const acum = poupAccum12(list);
+      poup12El.textContent = isFinite(acum) ? ('12 meses: ' + fmtPctPlain(acum)) : '';
+    }catch(e){
+      poupValueEl.textContent = '—';
+      poupRangeEl.textContent = 'falha de conexão';
+      poup12El.textContent = '';
+    }
+  }
+
+  // XAU é o código da onça troy de ouro. O bid da AwesomeAPI é o preço em reais dessa onça.
+  async function fetchOuro(force){
+    try{
+      const data = await indGetJson('ouro', 'https://economia.awesomeapi.com.br/json/last/XAU-BRL', IND_TTL_DAY_MS, indValidGold, force);
+      const q = data.XAUBRL;
+      const bid = parseFloat(String(q.bid).replace(',', '.'));
+      const pct = parseFloat(String(q.pctChange).replace(',', '.'));
+      if (!isFinite(bid)) throw new Error('sem cotação');
+      ouroValueEl.textContent = fmtMoney(bid);
+      if (isFinite(pct)){
+        const arrow = pct > 0 ? '▲' : pct < 0 ? '▼' : '—';
+        setChangeText(ouroChangeEl, pct, arrow + ' ' + fmtPct(pct));
+      } else {
+        ouroChangeEl.textContent = '';
+      }
+      let when = '';
+      if (q.create_date && q.create_date.length >= 16){
+        const parts = q.create_date.split(' ');
+        const d = parts[0].split('-');
+        if (d.length === 3) when = d[2] + '/' + d[1] + '/' + d[0] + (parts[1] ? ' ' + parts[1].slice(0, 5) : '');
+      }
+      ouroRangeEl.textContent = 'Cotação de mercado, não oficial' + (when ? ' · ' + when : '');
+    }catch(e){
+      ouroValueEl.textContent = '—';
+      setChangeText(ouroChangeEl, 0, 'falha de conexão');
+      ouroRangeEl.textContent = 'Cotação de mercado, não oficial';
+    }
+  }
+
+  async function fetchFocus(force){
+    const money = (v) => fmtMoney(v);
+    try{
+      const rows = await focusAnual('Selic', force);
+      selicFocusEl.textContent = focusLine(focusPair(rows), fmtPctPlain);
+    }catch(e){
+      selicFocusEl.textContent = 'Focus: falha de conexão';
+    }
+    try{
+      const rows = await focusAnual('Câmbio', force);
+      usdFocusEl.textContent = focusLine(focusPair(rows), money);
+    }catch(e){
+      usdFocusEl.textContent = 'Focus: falha de conexão';
+    }
+    let ipcaLine = '';
+    try{
+      const rows = await focusAnual('IPCA', force);
+      ipcaLine = focusLine(focusPair(rows), fmtPctPlain);
+    }catch(e){
+      ipcaLine = '';
+    }
+    try{
+      const filter = "Indicador eq 'IPCA'";
+      const url = 'https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativasMercadoInflacao12Meses?$top=4&$orderby=Data%20desc&$format=json&$filter=' + encodeURIComponent(filter);
+      const extra = await indGetJson('focus-ipca12', url, IND_TTL_DAY_MS, indValidFocus12, force);
+      const sameDate = extra.value[0].Data;
+      const row = extra.value.find(r => r.Data === sameDate && r.Suavizada === 'N' && r.baseCalculo === 0)
+        || extra.value.find(r => r.Suavizada === 'N');
+      if (row){
+        const bit = '12 meses ' + fmtPctPlain(row.Mediana);
+        ipcaLine = ipcaLine ? (ipcaLine + ' · ' + bit) : ('Focus de ' + focusStamp(row.Data) + ' · ' + bit);
+      }
+    }catch(e){}
+    ipcaFocusEl.textContent = ipcaLine || 'Focus: falha de conexão';
+    try{
+      const rows = await focusAnual('PIB Total', force);
+      const pair = focusPair(rows);
+      if (pair && pair.cur){
+        pibValueEl.textContent = fmtPctPlain(pair.cur.Mediana);
+        pibRangeEl.textContent = 'Focus de ' + focusStamp(pair.data) + ' · ' + pair.y;
+        pibNextEl.textContent = pair.nxt ? ((pair.y + 1) + ' ' + fmtPctPlain(pair.nxt.Mediana)) : '';
+      } else {
+        pibValueEl.textContent = '—';
+        pibRangeEl.textContent = 'indisponível';
+        pibNextEl.textContent = '';
+      }
+    }catch(e){
+      pibValueEl.textContent = '—';
+      pibRangeEl.textContent = 'falha de conexão';
+      pibNextEl.textContent = '';
+    }
+  }
+
   function fetchMarketSummary(opts){
     opts = opts || {};
     const force = !!opts.force;
     fetchIbovespa(force);
     fetchSelic(force);
     fetchCDI(force);
+    fetchPoupanca(force);
     fetchDolarBCB(force);
     fetchDolarFuturo(force);
     fetchEuroBCB(force);
+    fetchOuro(force);
     fetchIPCA12m(force);
     fetchIGPM12m(force);
+    fetchFocus(force);
     fetchCurvaJuros();
   }
 
