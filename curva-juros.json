@@ -1,0 +1,433 @@
+{
+  "dataRef": "2026-11-25",
+  "fonte": "B3",
+  "arquivo": "TradeInformationConsolidated",
+  "prefixada": [
+    {
+      "ticker": "DI1Z26",
+      "vencimento": "2026-12-01",
+      "anos": 0.0159,
+      "taxa": 13.651,
+      "negocios": 192,
+      "aberto": 243138
+    },
+    {
+      "ticker": "DI1F27",
+      "vencimento": "2027-01-01",
+      "anos": 0.1071,
+      "taxa": 13.684,
+      "negocios": 7370,
+      "aberto": 719992
+    },
+    {
+      "ticker": "DI1G27",
+      "vencimento": "2027-02-01",
+      "anos": 0.1905,
+      "taxa": 13.7,
+      "negocios": 1001,
+      "aberto": 302769
+    },
+    {
+      "ticker": "DI1H27",
+      "vencimento": "2027-03-01",
+      "anos": 0.2698,
+      "taxa": 13.747,
+      "negocios": 749,
+      "aberto": 37982
+    },
+    {
+      "ticker": "DI1J27",
+      "vencimento": "2027-04-01",
+      "anos": 0.3611,
+      "taxa": 13.789,
+      "negocios": 8022,
+      "aberto": 489397
+    },
+    {
+      "ticker": "DI1K27",
+      "vencimento": "2027-05-03",
+      "anos": 0.4484,
+      "taxa": 13.845,
+      "negocios": 114,
+      "aberto": 23121
+    },
+    {
+      "ticker": "DI1M27",
+      "vencimento": "2027-06-01",
+      "anos": 0.5317,
+      "taxa": 13.912,
+      "negocios": 14,
+      "aberto": 2667
+    },
+    {
+      "ticker": "DI1N27",
+      "vencimento": "2027-07-01",
+      "anos": 0.619,
+      "taxa": 13.989,
+      "negocios": 10555,
+      "aberto": 312866
+    },
+    {
+      "ticker": "DI1Q27",
+      "vencimento": "2027-08-02",
+      "anos": 0.7063,
+      "taxa": 14.04,
+      "negocios": 372,
+      "aberto": 7527
+    },
+    {
+      "ticker": "DI1U27",
+      "vencimento": "2027-09-01",
+      "anos": 0.7937,
+      "taxa": 14.101,
+      "negocios": 39,
+      "aberto": 3076
+    },
+    {
+      "ticker": "DI1V27",
+      "vencimento": "2027-10-01",
+      "anos": 0.881,
+      "taxa": 14.154,
+      "negocios": 7350,
+      "aberto": 116235
+    },
+    {
+      "ticker": "DI1X27",
+      "vencimento": "2027-11-01",
+      "anos": 0.9643,
+      "taxa": 14.189,
+      "negocios": 523,
+      "aberto": 4966
+    },
+    {
+      "ticker": "DI1Z27",
+      "vencimento": "2027-12-01",
+      "anos": 1.0516,
+      "taxa": 14.241,
+      "negocios": 30,
+      "aberto": 1696
+    },
+    {
+      "ticker": "DI1F28",
+      "vencimento": "2028-01-03",
+      "anos": 1.1429,
+      "taxa": 14.291,
+      "negocios": 37479,
+      "aberto": 624728
+    },
+    {
+      "ticker": "DI1J28",
+      "vencimento": "2028-04-03",
+      "anos": 1.4008,
+      "taxa": 14.426,
+      "negocios": 2436,
+      "aberto": 25374
+    },
+    {
+      "ticker": "DI1N28",
+      "vencimento": "2028-07-03",
+      "anos": 1.6587,
+      "taxa": 14.541,
+      "negocios": 15612,
+      "aberto": 81602
+    },
+    {
+      "ticker": "DI1V28",
+      "vencimento": "2028-10-02",
+      "anos": 1.9167,
+      "taxa": 14.631,
+      "negocios": 2099,
+      "aberto": 27341
+    },
+    {
+      "ticker": "DI1X28",
+      "vencimento": "2028-11-01",
+      "anos": 2.004,
+      "taxa": 14.652,
+      "negocios": 52,
+      "aberto": 483
+    },
+    {
+      "ticker": "DI1Z28",
+      "vencimento": "2028-12-01",
+      "anos": 2.0913,
+      "taxa": 14.677,
+      "negocios": 10,
+      "aberto": 110
+    },
+    {
+      "ticker": "DI1F29",
+      "vencimento": "2029-01-01",
+      "anos": 2.1746,
+      "taxa": 14.706,
+      "negocios": 48373,
+      "aberto": 578557
+    },
+    {
+      "ticker": "DI1J29",
+      "vencimento": "2029-04-02",
+      "anos": 2.4325,
+      "taxa": 14.763,
+      "negocios": 1142,
+      "aberto": 7510
+    },
+    {
+      "ticker": "DI1N29",
+      "vencimento": "2029-07-02",
+      "anos": 2.6905,
+      "taxa": 14.82,
+      "negocios": 7490,
+      "aberto": 47122
+    },
+    {
+      "ticker": "DI1V29",
+      "vencimento": "2029-10-01",
+      "anos": 2.9484,
+      "taxa": 14.845,
+      "negocios": 1024,
+      "aberto": 7525
+    },
+    {
+      "ticker": "DI1X29",
+      "vencimento": "2029-11-01",
+      "anos": 3.0397,
+      "taxa": 14.849,
+      "negocios": 96,
+      "aberto": 1242
+    },
+    {
+      "ticker": "DI1Z29",
+      "vencimento": "2029-12-03",
+      "anos": 3.127,
+      "taxa": 14.857,
+      "negocios": 154,
+      "aberto": 1289
+    },
+    {
+      "ticker": "DI1F30",
+      "vencimento": "2030-01-01",
+      "anos": 3.2103,
+      "taxa": 14.869,
+      "negocios": 20881,
+      "aberto": 140366
+    },
+    {
+      "ticker": "DI1J30",
+      "vencimento": "2030-04-01",
+      "anos": 3.4643,
+      "taxa": 14.879,
+      "negocios": 553,
+      "aberto": 2278
+    },
+    {
+      "ticker": "DI1N30",
+      "vencimento": "2030-07-01",
+      "anos": 3.7222,
+      "taxa": 14.912,
+      "negocios": 1433,
+      "aberto": 6396
+    },
+    {
+      "ticker": "DI1V30",
+      "vencimento": "2030-10-01",
+      "anos": 3.9841,
+      "taxa": 14.919,
+      "negocios": 420,
+      "aberto": 4266
+    },
+    {
+      "ticker": "DI1F31",
+      "vencimento": "2031-01-01",
+      "anos": 4.246,
+      "taxa": 14.946,
+      "negocios": 48073,
+      "aberto": 358121
+    },
+    {
+      "ticker": "DI1J31",
+      "vencimento": "2031-04-01",
+      "anos": 4.5,
+      "taxa": 14.947,
+      "negocios": 46,
+      "aberto": 147
+    },
+    {
+      "ticker": "DI1N31",
+      "vencimento": "2031-07-01",
+      "anos": 4.7579,
+      "taxa": 14.975,
+      "negocios": 288,
+      "aberto": 949
+    },
+    {
+      "ticker": "DI1V31",
+      "vencimento": "2031-10-01",
+      "anos": 5.0198,
+      "taxa": 14.989,
+      "negocios": 233,
+      "aberto": 892
+    },
+    {
+      "ticker": "DI1F32",
+      "vencimento": "2032-01-01",
+      "anos": 5.2817,
+      "taxa": 15.026,
+      "negocios": 12627,
+      "aberto": 107885
+    },
+    {
+      "ticker": "DI1F33",
+      "vencimento": "2033-01-03",
+      "anos": 6.3214,
+      "taxa": 15.072,
+      "negocios": 9881,
+      "aberto": 45782
+    },
+    {
+      "ticker": "DI1F34",
+      "vencimento": "2034-01-02",
+      "anos": 7.3532,
+      "taxa": 15.079,
+      "negocios": 1777,
+      "aberto": 4357
+    },
+    {
+      "ticker": "DI1F35",
+      "vencimento": "2035-01-01",
+      "anos": 8.3849,
+      "taxa": 15.081,
+      "negocios": 13742,
+      "aberto": 58736
+    },
+    {
+      "ticker": "DI1F36",
+      "vencimento": "2036-01-01",
+      "anos": 9.4206,
+      "taxa": 15.051,
+      "negocios": 1037,
+      "aberto": 3125
+    },
+    {
+      "ticker": "DI1F37",
+      "vencimento": "2037-01-01",
+      "anos": 10.4603,
+      "taxa": 15.051,
+      "negocios": 6410,
+      "aberto": 46209
+    },
+    {
+      "ticker": "DI1F38",
+      "vencimento": "2038-01-01",
+      "anos": 11.496,
+      "taxa": 15.023,
+      "negocios": 0,
+      "aberto": 0
+    },
+    {
+      "ticker": "DI1F39",
+      "vencimento": "2039-01-03",
+      "anos": 12.5317,
+      "taxa": 14.993,
+      "negocios": 0,
+      "aberto": 0
+    },
+    {
+      "ticker": "DI1F40",
+      "vencimento": "2040-01-02",
+      "anos": 13.5635,
+      "taxa": 14.975,
+      "negocios": 0,
+      "aberto": 0
+    },
+    {
+      "ticker": "DI1F41",
+      "vencimento": "2041-01-01",
+      "anos": 14.5992,
+      "taxa": 14.966,
+      "negocios": 0,
+      "aberto": 0
+    }
+  ],
+  "ipca": [
+    {
+      "ticker": "DAPZ26",
+      "vencimento": "2026-12-01",
+      "anos": 0.0159,
+      "taxa": 6.235,
+      "negocios": 8,
+      "aberto": 6700
+    },
+    {
+      "ticker": "DAPQ28",
+      "vencimento": "2028-08-01",
+      "anos": 1.7421,
+      "taxa": 7.255,
+      "negocios": 170,
+      "aberto": 29394
+    },
+    {
+      "ticker": "DAPK29",
+      "vencimento": "2029-05-01",
+      "anos": 2.5159,
+      "taxa": 7.45,
+      "negocios": 117,
+      "aberto": 17324
+    },
+    {
+      "ticker": "DAPQ30",
+      "vencimento": "2030-08-01",
+      "anos": 3.8135,
+      "taxa": 7.7,
+      "negocios": 103,
+      "aberto": 12859
+    },
+    {
+      "ticker": "DAPK31",
+      "vencimento": "2031-05-01",
+      "anos": 4.5873,
+      "taxa": 7.765,
+      "negocios": 147,
+      "aberto": 35407
+    },
+    {
+      "ticker": "DAPQ32",
+      "vencimento": "2032-08-02",
+      "anos": 5.8849,
+      "taxa": 7.855,
+      "negocios": 103,
+      "aberto": 17641
+    },
+    {
+      "ticker": "DAPK33",
+      "vencimento": "2033-05-02",
+      "anos": 6.6587,
+      "taxa": 7.805,
+      "negocios": 90,
+      "aberto": 6161
+    },
+    {
+      "ticker": "DAPK35",
+      "vencimento": "2035-05-01",
+      "anos": 8.7262,
+      "taxa": 7.79,
+      "negocios": 91,
+      "aberto": 8059
+    },
+    {
+      "ticker": "DAPK37",
+      "vencimento": "2037-05-01",
+      "anos": 10.8016,
+      "taxa": 7.59,
+      "negocios": 43,
+      "aberto": 2133
+    },
+    {
+      "ticker": "DAPQ40",
+      "vencimento": "2040-08-01",
+      "anos": 14.1667,
+      "taxa": 7.47,
+      "negocios": 63,
+      "aberto": 5317
+    }
+  ]
+}

@@ -493,6 +493,7 @@
   .banner.show{display:block;}
   .banner.error{background:var(--red-soft);color:var(--red);border:1px solid rgba(255,92,92,0.3);}
   .banner.warn{background:var(--amber-soft);color:var(--amber);border:1px solid rgba(214,178,96,0.3);}
+  .banner.note{background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border-soft);}
 
   /* ---------- Settings drawer ---------- */
   .drawer-backdrop{
@@ -2460,6 +2461,7 @@ const OptMath = (function(){
     function placeSeries(pts, color, dirFor){
       const placed = [];
       pts.forEach(pt => {
+        if (placed.some(o => Math.abs(o.x - pt.x) < 12 && o.text === pt.text)) return;
         const dir = dirFor(pt);              // -1 = acima da curva, +1 = abaixo
         const halfW = (pt.text.length * 6.2 + 4) / 2;
         let level = 0, y = 0, box = null;
@@ -2470,6 +2472,8 @@ const OptMath = (function(){
           if (!hit) break;
         }
         placed.push(box);
+        placed[placed.length - 1].x = pt.x;
+        placed[placed.length - 1].text = pt.text;
         if (level > 0){
           const yA = dir < 0 ? pt.y - 3 : pt.y + 3;
           const yB = dir < 0 ? y + 4 : y - 11;
@@ -2504,36 +2508,71 @@ const OptMath = (function(){
     `;
   }
 
-  // Snapshot fixo dos parâmetros da ANBIMA (modelo Svensson), pois o navegador não
-  // consegue buscar isso ao vivo (a ANBIMA não libera CORS para nenhuma origem externa,
-  // nem localhost). Atualize os valores abaixo pedindo ao Claude para consultar
-  // https://www.anbima.com.br/informacoes/est-termo/CZ.asp e colar os novos números.
+  // Reserva estática (modelo de Svensson da ANBIMA). A curva do dia vem de curva-juros.json,
+  // gerado sob demanda a partir do ajuste da B3. Este bloco só entra se o arquivo faltar.
+  const CURVA_JSON_URL = 'curva-juros.json';
+  const CURVA_LS_KEY = 'painelB3_curva_b3_v1';
   const CURVA_JUROS_ANBIMA_SNAPSHOT = {
     dataRef: '11/11/2026',
     PREFIXADOS: { beta1: 0.1431, beta2: -0.0069, beta3: -0.0151, beta4: 0.0379, lambda1: 1.6621, lambda2: 0.3382 },
     IPCA: { beta1: 0.0731, beta2: -0.0654, beta3: 0.0718, beta4: 0.0091, lambda1: 1.4654, lambda2: 0.2897 }
   };
 
+  function curvaB3Valida(d){
+    const ok = (lista) => Array.isArray(lista) && lista.length >= 2
+      && lista.every(p => p && typeof p.anos === 'number' && typeof p.taxa === 'number' && p.anos > 0);
+    return !!d && typeof d.dataRef === 'string' && ok(d.prefixada) && ok(d.ipca);
+  }
+  function dataBr(iso){
+    const p = String(iso || '').split('-');
+    return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : String(iso || '');
+  }
+  function desenharCurvaB3(d){
+    drawCurvaSvg(
+      d.prefixada.map(p => ({ anos: p.anos, taxa: p.taxa })),
+      d.ipca.map(p => ({ anos: p.anos, taxa: p.taxa }))
+    );
+    const br = dataBr(d.dataRef);
+    curvaBannerEl.className = 'banner show note';
+    curvaBannerEl.textContent = `Curva de ${br}, ajuste da B3. Prefixada: futuros DI1. Juro real: futuros DAP (cupom de IPCA).`;
+    curvaRefDateEl.textContent = `Data-base: ${br} · Fonte: B3 (ajuste do pregão)`;
+  }
+  function desenharCurvaEstatica(){
+    const { dataRef, PREFIXADOS: pre, IPCA: ipca } = CURVA_JUROS_ANBIMA_SNAPSHOT;
+    const prazosAnos = [];
+    for (let dias = 21; dias <= 30 * 252; dias += 21) prazosAnos.push(dias / 252);
+    drawCurvaSvg(
+      prazosAnos.map(t => ({ anos: t, taxa: svensson(pre.beta1, pre.beta2, pre.beta3, pre.beta4, pre.lambda1, pre.lambda2, t) * 100 })),
+      prazosAnos.map(t => ({ anos: t, taxa: svensson(ipca.beta1, ipca.beta2, ipca.beta3, ipca.beta4, ipca.lambda1, ipca.lambda2, t) * 100 }))
+    );
+    curvaBannerEl.className = 'banner show warn';
+    curvaBannerEl.textContent = `Arquivo da B3 indisponível. Exibindo o modelo ANBIMA de ${dataRef}.`;
+    curvaRefDateEl.textContent = `Data-base: ${dataRef} · Fonte: ANBIMA (est-termo, estático)`;
+  }
+  function curvaDoNavegador(){
+    try{
+      const salvo = JSON.parse(localStorage.getItem(CURVA_LS_KEY) || 'null');
+      if (salvo && curvaB3Valida(salvo.data)) return salvo.data;
+    }catch(e){}
+    return null;
+  }
   async function fetchCurvaJuros(){
     try{
-      const { dataRef, PREFIXADOS: pre, IPCA: ipca } = CURVA_JUROS_ANBIMA_SNAPSHOT;
-
-      const prazosAnos = [];
-      for (let dias = 21; dias <= 30 * 252; dias += 21) prazosAnos.push(dias / 252);
-
-      const pontosPre = prazosAnos.map(t => ({
-        anos: t,
-        taxa: svensson(pre.beta1, pre.beta2, pre.beta3, pre.beta4, pre.lambda1, pre.lambda2, t) * 100
-      }));
-      const pontosIpca = prazosAnos.map(t => ({
-        anos: t,
-        taxa: svensson(ipca.beta1, ipca.beta2, ipca.beta3, ipca.beta4, ipca.lambda1, ipca.lambda2, t) * 100
-      }));
-
-      drawCurvaSvg(pontosPre, pontosIpca);
-      curvaBannerEl.className = 'banner show warn';
-      curvaBannerEl.textContent = `Dados estáticos da ANBIMA (data-base ${dataRef}). Prefixado acima de 10 anos é extrapolação do modelo (a ANBIMA só publica até 10 anos). Peça ao Claude para atualizar.`;
-      curvaRefDateEl.textContent = `Data-base: ${dataRef} · Fonte: ANBIMA (est-termo)`;
+      const res = await fetch(CURVA_JSON_URL, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (!curvaB3Valida(data)) throw new Error('json inválido');
+      try{ localStorage.setItem(CURVA_LS_KEY, JSON.stringify({ at: Date.now(), data })); }catch(e){}
+      desenharCurvaB3(data);
+      return;
+    }catch(e){}
+    const cache = curvaDoNavegador();
+    if (cache){
+      desenharCurvaB3(cache);
+      return;
+    }
+    try{
+      desenharCurvaEstatica();
     }catch(e){
       curvaBannerEl.className = 'banner show error';
       curvaBannerEl.textContent = 'Não foi possível calcular a curva de juros.';

@@ -1,0 +1,35 @@
+name: Atualizar curva de juros
+
+# Só quando alguém dispara em Actions → Atualizar curva de juros → Run workflow.
+# O push deste JSON na branch main faz o workflow de Pages publicar de novo.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: curva-juros
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Baixar ajustes da B3
+        run: python3 scripts/atualizar-curva.py
+
+      - name: Publicar o JSON
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add curva-juros.json
+          if git diff --cached --quiet; then
+            echo "A curva já está neste pregão."
+          else
+            git commit -m "Atualiza a curva de juros com o ajuste da B3."
+            git push
+          fi
