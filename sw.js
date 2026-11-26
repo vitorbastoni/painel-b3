@@ -4,17 +4,19 @@
    sempre buscados na rede e nunca gravados neste cache. */
 'use strict';
 
-var VERSION = '1';
+var VERSION = '2';
 var SHELL_CACHE = 'painel-b3-shell-v' + VERSION;
 
 var SHELL = [
   'index.html',
-  'manifest.webmanifest',
-  'icons/icon-192.png',
-  'icons/icon-512.png',
-  'icons/icon-maskable-192.png',
-  'icons/icon-maskable-512.png',
-  'icons/apple-touch-icon.png'
+  'manifest-v2.webmanifest',
+  'icons/vb-192.png',
+  'icons/vb-512.png',
+  'icons/vb-maskable-192.png',
+  'icons/vb-maskable-512.png',
+  'icons/vb-apple-touch.png',
+  'icons/vb-favicon.png',
+  'icons/vb-favicon.svg'
 ];
 
 function isLiveDataHost(hostname) {
