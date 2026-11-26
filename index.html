@@ -183,6 +183,7 @@
     gap:4px;
     padding:0 32px;
     border-bottom:1px solid var(--border-soft);
+    overflow-x:auto;
   }
   .tab-btn{
     background:none;
@@ -195,6 +196,8 @@
     cursor:pointer;
     border-bottom:2px solid transparent;
     transition:color .15s ease, border-color .15s ease;
+    white-space:nowrap;
+    flex:0 0 auto;
   }
   .tab-btn:hover{color:var(--text);}
   .tab-btn.active{color:var(--amber);border-color:var(--amber);}
@@ -709,8 +712,8 @@
     /* Transações: oculta Qtd/Preço (cabeçalho e linhas) e dá espaço ao Total e ao botão remover */
     .tx-row{grid-template-columns:76px 56px minmax(0,1fr) auto 24px;gap:6px;padding:12px;}
     /* Indicadores e resumo da Carteira: duas colunas ocupando a largura toda, em vez de cards estreitos à esquerda */
-    #tabIndicadores .market-summary, #portfolioSummary{grid-template-columns:repeat(2,minmax(0,1fr));}
-    #tabIndicadores .summary-card, #portfolioSummary .summary-card{max-width:none;min-width:0;}
+    #tabIndicadores .market-summary, #portfolioSummary, #despSummary{grid-template-columns:repeat(2,minmax(0,1fr));}
+    #tabIndicadores .summary-card, #portfolioSummary .summary-card, #despSummary .summary-card{max-width:none;min-width:0;}
     #tabIndicadores .summary-value{font-size:18px;}
     #portfolioSummary .summary-value{font-size:16px;}
     .pos-peso{display:block;margin:2px 0 0;font-size:10.5px;}
@@ -768,6 +771,19 @@
   .prov-actions button{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;height:34px;padding:0 12px;cursor:pointer;font-family:var(--font-display);font-size:13px;font-weight:500;}
   .prov-actions button:hover{border-color:var(--amber);color:var(--amber);}
   .prov-hint{font-size:12px;line-height:1.45;color:var(--text-dim);margin:0 0 18px;}
+  .desp-note{font-size:12.5px;line-height:1.55;color:var(--text-dim);margin:-8px 0 16px;}
+  .desp-chart{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px 10px;margin-bottom:18px;}
+  .desp-legend{display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--text-muted);}
+  .desp-swatch{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;}
+  .desp-row{display:grid;grid-template-columns:1fr 150px 110px 140px;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border-soft);font-size:13.5px;}
+  .desp-row:last-child{border-bottom:none;}
+  .desp-row .num{text-align:right;font-family:var(--font-mono);}
+  .desp-head{font-family:var(--font-mono);font-size:12px;font-weight:500;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.06em;background:var(--surface-2);}
+  .desp-miss{display:block;margin-top:2px;font-family:var(--font-display);font-size:11px;font-weight:500;color:var(--text-dim);}
+  @media (max-width:640px){
+    .desp-row{grid-template-columns:1fr auto auto;gap:8px;padding:12px;}
+    .desp-row .desp-prov{display:none;}
+  }
   .sales-bar{height:8px;border-radius:100px;background:var(--surface-2);border:1px solid var(--border);overflow:hidden;margin:4px 0 2px;}
   .sales-bar-fill{height:100%;width:0;background:var(--green);border-radius:100px;transition:width .25s ease;}
   .sales-bar-fill.warn{background:var(--amber);}
@@ -989,6 +1005,7 @@
     <button class="tab-btn" data-tab="setores">Setores</button>
     <button class="tab-btn" data-tab="carteira">Carteira</button>
     <button class="tab-btn" data-tab="vendas">Vendas</button>
+    <button class="tab-btn" data-tab="desempenho">Desempenho</button>
     <button class="tab-btn" data-tab="opcoes">Opções</button>
     <button class="tab-btn" data-tab="hp12c">HP 12C</button>
   </div>
@@ -1323,6 +1340,50 @@
         <div id="salesContainer"></div>
       </div>
       <p class="sales-note">Referência simplificada, sem valor fiscal. Ações (códigos terminados em 3 a 8) têm isenção até R$ 20 mil vendidos no mês e pagam 15% sobre o lucro; BDRs (final 32 a 35 ou 39) pagam 15% sobre qualquer lucro, sem isenção; FIIs pagam 20% sobre qualquer lucro, sem isenção; ETFs de renda variável pagam 15%, sem isenção. Códigos terminados em 11 são tratados como FII, exceto os listados como ETF, unit ou ETF de renda fixa no script (ETF_RV_TICKERS e FORA_11_TICKERS), que podem ser editados. Units e ETFs de renda fixa ficam fora do cálculo. O card do ano soma o imposto estimado de cada mês, pelas mesmas regras. Não considera corretagem, emolumentos, IRRF retido, day trade (20%) nem prejuízos de meses anteriores ou compensação entre ativos (prejuízo de FII só compensa FII). O DARF (código 6015) vence no último dia útil do mês seguinte. Confirme com a nota de corretagem e com um contador.</p>
+    </div>
+
+    <div class="tab-panel" id="tabDesempenho" hidden>
+      <h3 class="tx-title" id="despTitle" style="margin-top:0;">Desempenho no ano</h3>
+      <p class="desp-note">Método: Dietz modificada. O resultado em R$ junta a variação contra o custo, o ganho das vendas do ano e os proventos recebidos. O percentual dá mais peso ao dinheiro que ficou mais tempo aplicado. Em 1º de janeiro o ponto de partida é o custo médio do que você já tinha — o painel não guarda o preço de mercado daquela data, então o ganho anterior a este ano entra no número. No gráfico, a cotação de hoje só entra no último ponto. O CDI é a taxa diária do Banco Central (SGS 12), composta no ano. “% do CDI” compara os reais da carteira com o que o mesmo capital teria rendido no CDI.</p>
+      <div class="market-summary" id="despSummary">
+        <div class="summary-card">
+          <span class="summary-label">Resultado da carteira</span>
+          <span class="summary-value" id="despCarteiraRs">—</span>
+          <span class="summary-change" id="despCarteiraPct"></span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">CDI no ano</span>
+          <span class="summary-value" id="despCdiPct">···</span>
+          <span class="summary-change flat" id="despCdiSub"></span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Mesmo capital no CDI</span>
+          <span class="summary-value" id="despCdiRs">···</span>
+          <span class="summary-change flat" id="despCdiRsSub"></span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Carteira em % do CDI</span>
+          <span class="summary-value" id="despVsCdi">···</span>
+          <span class="summary-change flat" id="despVsSub"></span>
+        </div>
+      </div>
+      <p class="desp-note" id="despWarn" hidden></p>
+      <div class="desp-chart" id="despChartBox" hidden>
+        <svg id="despSvg" viewBox="0 0 640 220" style="width:100%;height:auto;display:block;"></svg>
+        <div class="desp-legend">
+          <span><span class="desp-swatch" style="background:var(--amber)"></span>Carteira</span>
+          <span><span class="desp-swatch" style="background:#5aa9e6"></span>CDI</span>
+        </div>
+      </div>
+      <div class="table-wrap" id="despTable">
+        <div class="desp-row desp-head">
+          <span>Código</span>
+          <span class="num">Resultado</span>
+          <span class="num">Retorno</span>
+          <span class="num desp-prov">Proventos</span>
+        </div>
+        <div id="despRows"></div>
+      </div>
     </div>
 
     <div class="tab-panel" id="tabOpcoes" hidden>
@@ -1663,6 +1724,7 @@ const OptMath = (function(){
   const tabIndicadores = document.getElementById('tabIndicadores');
   const tabCarteira = document.getElementById('tabCarteira');
   const tabVendas = document.getElementById('tabVendas');
+  const tabDesempenho = document.getElementById('tabDesempenho');
   const tabHp12c = document.getElementById('tabHp12c');
   const tabSetores = document.getElementById('tabSetores');
   const tabOpcoes = document.getElementById('tabOpcoes');
@@ -1712,6 +1774,20 @@ const OptMath = (function(){
   const salesYearProvEl = document.getElementById('salesYearProv');
   const salesYearValueEl = document.getElementById('salesYearValue');
   const salesYearTotalEl = document.getElementById('salesYearTotal');
+  const despTitleEl = document.getElementById('despTitle');
+  const despWarnEl = document.getElementById('despWarn');
+  const despChartBox = document.getElementById('despChartBox');
+  const despSvgEl = document.getElementById('despSvg');
+  const despRowsEl = document.getElementById('despRows');
+  const despTableEl = document.getElementById('despTable');
+  const despCarteiraRsEl = document.getElementById('despCarteiraRs');
+  const despCarteiraPctEl = document.getElementById('despCarteiraPct');
+  const despCdiPctEl = document.getElementById('despCdiPct');
+  const despCdiSubEl = document.getElementById('despCdiSub');
+  const despCdiRsEl = document.getElementById('despCdiRs');
+  const despCdiRsSubEl = document.getElementById('despCdiRsSub');
+  const despVsCdiEl = document.getElementById('despVsCdi');
+  const despVsSubEl = document.getElementById('despVsSub');
   const provImportBtn = document.getElementById('provImportBtn');
   const provClearBtn = document.getElementById('provClearBtn');
   const provImportInput = document.getElementById('provImportInput');
@@ -2880,6 +2956,7 @@ const OptMath = (function(){
     fetchIbovespa(force);
     fetchSelic(force);
     fetchCDI(force);
+    fetchCdiAno(force);
     fetchPoupanca(force);
     fetchDolarBCB(force);
     fetchDolarFuturo(force);
@@ -3633,6 +3710,306 @@ const OptMath = (function(){
     salesYearTotalEl.className = 'sales-year-total-value ' + (total > 0 ? 'up' : total < 0 ? 'down' : 'flat');
   }
 
+  // ===== Desempenho no ano (Dietz modificada × CDI) =====
+  // O valor inicial é o custo das posições em 1º de janeiro. Cada compra entra como
+  // aporte, cada venda e cada provento como resgate. A cotação atual só vale no fim.
+  let cdiAno = { status: 'loading' };
+  const DESP_MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+
+  function despHoje(){ return spDayStr(Date.now()); }
+  function despAno(){
+    const y = parseInt(despHoje().slice(0, 4), 10);
+    return isFinite(y) ? y : 2026;
+  }
+  function despDays(a, b){
+    const p = s => { const x = s.split('-').map(Number); return Date.UTC(x[0], x[1] - 1, x[2]); };
+    return Math.round((p(b) - p(a)) / 86400000);
+  }
+  function despMonthEnd(year, month, hoje){
+    const last = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+    return last > hoje ? hoje : last;
+  }
+  function sgsToIso(s){
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(s || ''));
+    return m ? m[3] + '-' + m[2] + '-' + m[1] : '';
+  }
+
+  function despReplay(until, inclusive){
+    const sorted = transactions.slice().sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.id || 0) - (b.id || 0));
+    const pos = {};
+    sorted.forEach(tx => {
+      if (!tx || typeof tx.date !== 'string' || !tx.ticker) return;
+      if (inclusive ? tx.date > until : tx.date >= until) return;
+      if (!pos[tx.ticker]) pos[tx.ticker] = { qty: 0, avg: 0 };
+      const p = pos[tx.ticker];
+      const qty = Number(tx.qty) || 0;
+      const price = Number(tx.price) || 0;
+      if (tx.type === 'compra'){
+        const novo = p.qty + qty;
+        p.avg = novo > 0 ? (p.avg * p.qty + price * qty) / novo : 0;
+        p.qty = novo;
+      } else if (tx.type === 'venda'){
+        p.qty = Math.max(0, p.qty - qty);
+        if (p.qty === 0) p.avg = 0;
+      }
+    });
+    return pos;
+  }
+
+  function despFlows(start, end){
+    const flows = [];
+    transactions.forEach(tx => {
+      if (!tx || typeof tx.date !== 'string' || tx.date < start || tx.date > end || !tx.ticker) return;
+      const amt = (Number(tx.qty) || 0) * (Number(tx.price) || 0);
+      if (!(amt > 0)) return;
+      if (tx.type === 'compra') flows.push({ date: tx.date, amount: amt, ticker: tx.ticker, kind: 'compra' });
+      else if (tx.type === 'venda') flows.push({ date: tx.date, amount: -amt, ticker: tx.ticker, kind: 'venda' });
+    });
+    proventos.forEach(p => {
+      if (!p || typeof p.pagamento !== 'string' || p.pagamento < start || p.pagamento > end) return;
+      if (typeof p.valor !== 'number' || !isFinite(p.valor)) return;
+      flows.push({ date: p.pagamento, amount: -p.valor, ticker: p.ticker, kind: 'provento', valor: p.valor });
+    });
+    return flows;
+  }
+
+  function despValor(pos, useMarket){
+    let total = 0;
+    const sem = [];
+    Object.keys(pos).forEach(t => {
+      const p = pos[t];
+      if (!(p.qty > 0)) return;
+      let price = p.avg;
+      if (useMarket){
+        const q = quotes[t];
+        const mkt = q && typeof q.regularMarketPrice === 'number' && isFinite(q.regularMarketPrice) ? q.regularMarketPrice : null;
+        if (mkt == null) sem.push(t);
+        else price = mkt;
+      }
+      total += price * p.qty;
+    });
+    return { total, sem };
+  }
+
+  function despCalc(end, useMarket, ticker){
+    const start = despAno() + '-01-01';
+    const ate = end < start ? start : end;
+    const keep = (pos) => {
+      if (!ticker) return pos;
+      return pos[ticker] ? { [ticker]: pos[ticker] } : {};
+    };
+    const b = despValor(keep(despReplay(start, false)), false);
+    const e = despValor(keep(despReplay(ate, true)), useMarket);
+    const flows = despFlows(start, ate).filter(f => !ticker || f.ticker === ticker);
+    const cd = Math.max(1, despDays(start, ate));
+    let cf = 0, weighted = 0, prov = 0;
+    flows.forEach(f => {
+      const di = Math.min(cd, Math.max(0, despDays(start, f.date)));
+      cf += f.amount;
+      weighted += f.amount * ((cd - di) / cd);
+      if (f.kind === 'provento') prov += f.valor;
+    });
+    const resultado = e.total - b.total - cf;
+    const denom = b.total + weighted;
+    return {
+      resultado, prov, bmv: b.total, emv: e.total, sem: e.sem, flows,
+      pct: denom > 0.5 ? (resultado / denom) * 100 : null
+    };
+  }
+
+  function cdiBuild(series, start, end){
+    const pts = [];
+    (Array.isArray(series) ? series : []).forEach(item => {
+      const day = sgsToIso(item && item.data);
+      const v = parseFloat(String(item && item.valor).replace(',', '.'));
+      if (!day || day < start || day > end || !isFinite(v)) return;
+      pts.push({ day, r: v / 100 });
+    });
+    pts.sort((a, b) => a.day.localeCompare(b.day));
+    const days = [], fac = [];
+    let f = 1;
+    pts.forEach(p => { f *= (1 + p.r); days.push(p.day); fac.push(f); });
+    function factorOn(day){
+      let lo = 0, hi = days.length - 1, ans = -1;
+      while (lo <= hi){
+        const mid = (lo + hi) >> 1;
+        if (days[mid] <= day){ ans = mid; lo = mid + 1; }
+        else hi = mid - 1;
+      }
+      return ans < 0 ? 1 : fac[ans];
+    }
+    return { status: days.length ? 'ok' : 'fail', factorOn, pct: (f - 1) * 100, lastDay: days.length ? days[days.length - 1] : null };
+  }
+
+  function despCdiRs(end, flows, bmv){
+    if (!cdiAno || cdiAno.status !== 'ok') return null;
+    const fEnd = cdiAno.factorOn(end);
+    let rs = bmv * (fEnd - 1);
+    flows.forEach(f => {
+      const fAt = cdiAno.factorOn(f.date);
+      if (!(fAt > 0)) return;
+      rs += f.amount * (fEnd / fAt - 1);
+    });
+    return rs;
+  }
+
+  async function fetchCdiAno(force){
+    const ano = despAno();
+    const hoje = despHoje();
+    const url = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=01/01/'
+      + ano + '&dataFinal=' + hoje.slice(8, 10) + '/' + hoje.slice(5, 7) + '/' + ano;
+    try{
+      const data = await indGetJson('cdi-ytd-' + ano, url, IND_TTL_DAY_MS, indValidSgs, force);
+      const built = cdiBuild(data, ano + '-01-01', hoje);
+      cdiAno = built.status === 'ok' ? built : { status: 'fail' };
+    }catch(e){
+      if (!cdiAno || cdiAno.status !== 'ok') cdiAno = { status: 'fail' };
+    }
+    renderDesempenho();
+  }
+
+  function despSignClass(v){ return v > 0 ? 'up' : v < 0 ? 'down' : ''; }
+
+  function drawDespChart(pontos){
+    const W = 640, H = 220, L = 44, R = 12, T = 16, B = 28;
+    const vals = [];
+    pontos.forEach(p => { if (p.cart != null) vals.push(p.cart); if (p.cdi != null) vals.push(p.cdi); });
+    if (!vals.length){ despSvgEl.innerHTML = ''; return; }
+    let min = Math.min(0, Math.min.apply(null, vals));
+    let max = Math.max(0, Math.max.apply(null, vals));
+    if (max - min < 0.5){ max += 0.5; min -= 0.5; }
+    const pad = (max - min) * 0.12;
+    min -= pad; max += pad;
+    const x = i => L + (pontos.length === 1 ? (W - L - R) / 2 : i * (W - L - R) / (pontos.length - 1));
+    const y = v => T + ((max - v) / (max - min)) * (H - T - B);
+    let dCart = '', dCdi = '';
+    pontos.forEach((p, i) => {
+      const px = x(i).toFixed(1);
+      if (p.cdi != null) dCdi += (dCdi ? 'L' : 'M') + px + ' ' + y(p.cdi).toFixed(1) + ' ';
+      if (p.cart != null) dCart += (dCart ? 'L' : 'M') + px + ' ' + y(p.cart).toFixed(1) + ' ';
+    });
+    const y0 = y(0);
+    const labels = pontos.map((p, i) => '<text x="' + x(i).toFixed(1) + '" y="' + (H - 8) + '" font-size="11" fill="var(--text-muted)" text-anchor="middle">' + p.label + '</text>').join('');
+    despSvgEl.innerHTML = '<line x1="' + L + '" y1="' + y0.toFixed(1) + '" x2="' + (W - R) + '" y2="' + y0.toFixed(1) + '" stroke="var(--border)" stroke-width="1"/>'
+      + (dCdi ? '<path d="' + dCdi.trim() + '" fill="none" stroke="#5aa9e6" stroke-width="2"/>' : '')
+      + (dCart ? '<path d="' + dCart.trim() + '" fill="none" stroke="var(--amber)" stroke-width="2.4"/>' : '')
+      + labels;
+  }
+
+  function renderDesempenho(){
+    if (!despCarteiraRsEl) return;
+    const ano = despAno();
+    const hoje = despHoje();
+    const start = ano + '-01-01';
+    despTitleEl.textContent = 'Desempenho em ' + ano;
+    const pos0 = despReplay(start, false);
+    const posHoje = despReplay(hoje, true);
+    const aberto = Object.keys(pos0).some(t => pos0[t].qty > 0) || Object.keys(posHoje).some(t => posHoje[t].qty > 0);
+    const flowsAll = despFlows(start, hoje);
+    if (!aberto && !flowsAll.length){
+      despCarteiraRsEl.textContent = '—';
+      despCarteiraRsEl.className = 'summary-value';
+      setChangeText(despCarteiraPctEl, 0, 'sem lançamentos neste ano');
+      despWarnEl.hidden = true;
+      despChartBox.hidden = true;
+      despTableEl.hidden = true;
+      despRowsEl.innerHTML = '';
+      despCdiRsEl.textContent = cdiAno.status === 'fail' ? '—' : (cdiAno.status === 'ok' ? fmtMoney(0) : '···');
+      despCdiRsEl.className = 'summary-value';
+      if (cdiAno.status === 'ok'){
+        despCdiPctEl.textContent = fmtPct(cdiAno.pct);
+        despCdiPctEl.className = 'summary-value up';
+        despCdiSubEl.textContent = cdiAno.lastDay ? 'acumulado até ' + cdiAno.lastDay.split('-').reverse().join('/') : '';
+      } else if (cdiAno.status === 'fail'){
+        despCdiPctEl.textContent = '—';
+        despCdiPctEl.className = 'summary-value';
+        despCdiSubEl.textContent = 'falha de conexão';
+      }
+      despVsCdiEl.textContent = '—';
+      despVsCdiEl.className = 'summary-value';
+      despVsSubEl.textContent = '';
+      return;
+    }
+    despTableEl.hidden = false;
+    const total = despCalc(hoje, true, null);
+    despCarteiraRsEl.textContent = fmtMoneySigned(total.resultado);
+    despCarteiraRsEl.className = 'summary-value ' + despSignClass(total.resultado);
+    setChangeText(despCarteiraPctEl, total.pct == null ? 0 : total.pct, total.pct == null ? '—' : fmtPct(total.pct));
+    if (total.sem.length){
+      despWarnEl.hidden = false;
+      despWarnEl.textContent = 'Sem cotação de ' + total.sem.join(', ') + ': o valor atual desses ativos usa o custo.';
+    } else despWarnEl.hidden = true;
+
+    const mesAtual = parseInt(hoje.slice(5, 7), 10);
+    const pontos = [];
+    for (let m = 1; m <= mesAtual; m++){
+      const fim = despMonthEnd(ano, m, hoje);
+      const c = despCalc(fim, m === mesAtual, null);
+      const cdiPct = cdiAno.status === 'ok' ? (cdiAno.factorOn(fim) - 1) * 100 : null;
+      pontos.push({ label: DESP_MESES[m - 1], cart: c.pct, cdi: cdiPct });
+    }
+    despChartBox.hidden = false;
+    drawDespChart(pontos);
+
+    const tickers = new Set();
+    Object.keys(posHoje).forEach(t => { if (posHoje[t].qty > 0) tickers.add(t); });
+    Object.keys(pos0).forEach(t => { if (pos0[t].qty > 0) tickers.add(t); });
+    flowsAll.forEach(f => { if (f.ticker) tickers.add(f.ticker); });
+    const linhas = Array.from(tickers).map(t => Object.assign({ ticker: t }, despCalc(hoje, true, t)))
+      .sort((a, b) => Math.abs(b.resultado) - Math.abs(a.resultado));
+    despRowsEl.innerHTML = '';
+    if (!linhas.length){
+      despRowsEl.innerHTML = '<div class="tx-empty">Nenhum ativo neste ano.</div>';
+    } else {
+      linhas.forEach(r => {
+        const row = document.createElement('div');
+        row.className = 'desp-row';
+        const miss = r.sem.indexOf(r.ticker) >= 0 ? '<span class="desp-miss">sem cotação</span>' : '';
+        row.innerHTML = '<span><span class="pos-ticker">' + esc(r.ticker) + '</span>' + miss + '</span>'
+          + '<span class="num ' + despSignClass(r.resultado) + '">' + fmtMoneySigned(r.resultado) + '</span>'
+          + '<span class="num ' + despSignClass(r.pct || 0) + '">' + (r.pct == null ? '—' : fmtPct(r.pct)) + '</span>'
+          + '<span class="num desp-prov">' + (r.prov ? fmtMoney(r.prov) : '—') + '</span>';
+        despRowsEl.appendChild(row);
+      });
+    }
+
+    if (cdiAno.status === 'loading'){
+      despCdiPctEl.textContent = '···';
+      despCdiPctEl.className = 'summary-value';
+      despCdiSubEl.textContent = '';
+      despCdiRsEl.textContent = '···';
+      despCdiRsEl.className = 'summary-value';
+      despCdiRsSubEl.textContent = '';
+      despVsCdiEl.textContent = '···';
+      despVsCdiEl.className = 'summary-value';
+      despVsSubEl.textContent = '';
+      return;
+    }
+    if (cdiAno.status !== 'ok'){
+      despCdiPctEl.textContent = '—';
+      despCdiPctEl.className = 'summary-value';
+      despCdiSubEl.textContent = 'falha de conexão';
+      despCdiRsEl.textContent = '—';
+      despCdiRsEl.className = 'summary-value';
+      despCdiRsSubEl.textContent = '';
+      despVsCdiEl.textContent = '—';
+      despVsCdiEl.className = 'summary-value';
+      despVsSubEl.textContent = '';
+      return;
+    }
+    despCdiPctEl.textContent = fmtPct(cdiAno.pct);
+    despCdiPctEl.className = 'summary-value ' + despSignClass(cdiAno.pct);
+    despCdiSubEl.textContent = cdiAno.lastDay ? 'acumulado até ' + cdiAno.lastDay.split('-').reverse().join('/') : '';
+    const cdiRs = despCdiRs(hoje, total.flows, total.bmv);
+    despCdiRsEl.textContent = cdiRs == null ? '—' : fmtMoneySigned(cdiRs);
+    despCdiRsEl.className = 'summary-value ' + (cdiRs == null ? '' : despSignClass(cdiRs));
+    despCdiRsSubEl.textContent = 'sobre o mesmo capital';
+    const vs = (cdiRs != null && Math.abs(cdiRs) > 0.5) ? (total.resultado / cdiRs) * 100 : null;
+    despVsCdiEl.textContent = vs == null ? '—' : vs.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + '%';
+    despVsCdiEl.className = 'summary-value ' + (vs == null ? '' : vs >= 100 ? 'up' : vs < 0 ? 'down' : '');
+    despVsSubEl.textContent = vs == null ? '' : (vs >= 100 ? 'acima do CDI' : 'abaixo do CDI');
+  }
+
   // Preço teto por ativo: só tickers válidos e números positivos.
   function sanitizeTetos(src){
     const out = {};
@@ -4127,6 +4504,7 @@ const OptMath = (function(){
     }
     renderProventosAno(ano);
     renderResultadoTotal(ano, liquidoAno);
+    renderDesempenho();
 
     // lista de vendas do mês (todas, com marcação das que ficam fora do limite)
     if (doMes.length === 0){
@@ -4321,6 +4699,7 @@ const OptMath = (function(){
       tabIndicadores.hidden = tab !== 'indicadores';
       tabCarteira.hidden = tab !== 'carteira';
       tabVendas.hidden = tab !== 'vendas';
+      tabDesempenho.hidden = tab !== 'desempenho';
       tabHp12c.hidden = tab !== 'hp12c';
       tabSetores.hidden = tab !== 'setores';
       tabOpcoes.hidden = tab !== 'opcoes';
