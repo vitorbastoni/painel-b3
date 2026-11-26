@@ -4,7 +4,7 @@ Painel pessoal de ações e indicadores da B3, publicado como aplicativo instal�
 
 Endereço: <https://vitorbastoni.github.io/painel-b3/>
 
-Carteira, transações, token da brapi e configurações ficam **somente neste navegador** (armazenamento local). Nada disso vai para um servidor nosso.
+Carteira, transações, proventos importados, token da brapi e configurações ficam **somente neste navegador** (armazenamento local). Nada disso vai para um servidor nosso. Na aba Vendas, o card do resultado do ano mostra os proventos daquele ano depois que você importa os arquivos “Proventos Recebidos” (.xlsx) da Área do Investidor. Esses lançamentos também entram no backup JSON.
 
 Na primeira vez, neste celular ou computador, o painel abre com a carteira vazia. Para trazer os seus lançamentos, abra as configurações (ícone de engrenagem) e use **Importar backup (.json)**. Quem já abriu o painel neste navegador continua com o que está salvo nele. Para guardar uma cópia, use **Exportar backup (.json)** nas mesmas configurações.
 

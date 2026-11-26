@@ -753,10 +753,15 @@
   .sales-total{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid rgba(214,178,96,0.45);border-radius:10px;padding:14px 18px;margin:-6px 0 18px;}
   .sales-total-text{display:flex;flex-direction:column;gap:5px;}
   .sales-total-value{font-family:var(--font-mono);font-size:22px;font-weight:600;color:var(--amber);}
-  .sales-year{margin:0 0 18px;}
+  .sales-year{margin:0 0 10px;}
   .sales-year .sales-total-value.up{color:var(--green);}
   .sales-year .sales-total-value.down{color:var(--red);}
   .sales-year .sales-total-value.flat{color:var(--text-muted);}
+  .sales-year-prov{font-family:var(--font-mono);font-size:12px;line-height:1.45;color:var(--text);}
+  .prov-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 6px;}
+  .prov-actions button{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;height:34px;padding:0 12px;cursor:pointer;font-family:var(--font-display);font-size:13px;font-weight:500;}
+  .prov-actions button:hover{border-color:var(--amber);color:var(--amber);}
+  .prov-hint{font-size:12px;line-height:1.45;color:var(--text-dim);margin:0 0 18px;}
   .sales-bar{height:8px;border-radius:100px;background:var(--surface-2);border:1px solid var(--border);overflow:hidden;margin:4px 0 2px;}
   .sales-bar-fill{height:100%;width:0;background:var(--green);border-radius:100px;transition:width .25s ease;}
   .sales-bar-fill.warn{background:var(--amber);}
@@ -1281,9 +1286,16 @@
           <span class="summary-label" id="salesYearLabel">Resultado líquido das operações no ano</span>
           <span class="summary-change flat" id="salesYearSub"></span>
           <span class="summary-change flat" id="salesYearSub2"></span>
+          <span class="sales-year-prov" id="salesYearProv">Proventos recebidos: —</span>
         </div>
         <span class="sales-total-value" id="salesYearValue">—</span>
       </div>
+      <div class="prov-actions">
+        <button type="button" id="provImportBtn">Importar proventos (.xlsx)</button>
+        <button type="button" id="provClearBtn">Limpar proventos</button>
+        <input type="file" id="provImportInput" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple hidden>
+      </div>
+      <p class="prov-hint" id="provStatus">Relatório “Proventos Recebidos” da Área do Investidor, um arquivo por ano. Vários arquivos de uma vez. Importar o mesmo arquivo de novo não duplica.</p>
       <div class="table-wrap" id="salesTableWrap">
         <div class="sale-row sale-head">
           <span>Data</span>
@@ -1589,6 +1601,7 @@ const OptMath = (function(){
   return { cdf, pdf, price, greeks, impliedVol, histVol, businessDays, DU_ANO };
 })();
 </script>
+<script src="xlsx-lite.js"></script>
 <script>
 (function(){
   let watchlist = [];
@@ -1596,6 +1609,7 @@ const OptMath = (function(){
   let positions = {}; // { TICKER: { buyPrice, qty } }
   let tetos = {};     // { TICKER: preço teto digitado na aba Carteira }
   let transactions = []; // [{ id, ticker, type: 'compra'|'venda', qty, price, date }]
+  let proventos = []; // relatório B3 "Proventos Recebidos": dividendo, JCP e outros, já líquidos
   let token = '';
   let refreshSeconds = 600;
   let refreshTimer = null;
@@ -1680,7 +1694,12 @@ const OptMath = (function(){
   const salesYearLabelEl = document.getElementById('salesYearLabel');
   const salesYearSubEl = document.getElementById('salesYearSub');
   const salesYearSub2El = document.getElementById('salesYearSub2');
+  const salesYearProvEl = document.getElementById('salesYearProv');
   const salesYearValueEl = document.getElementById('salesYearValue');
+  const provImportBtn = document.getElementById('provImportBtn');
+  const provClearBtn = document.getElementById('provClearBtn');
+  const provImportInput = document.getElementById('provImportInput');
+  const provStatusEl = document.getElementById('provStatus');
   const usdValueEl = document.getElementById('usdValue');
   const usdChangeEl = document.getElementById('usdChange');
   const usdRangeEl = document.getElementById('usdRange');
@@ -3258,6 +3277,7 @@ const OptMath = (function(){
         positions,
         tetos,
         portfolioTx: transactions,
+        proventos,
         token,
         viewMode,
         refreshSeconds,
@@ -3285,6 +3305,7 @@ const OptMath = (function(){
       positions,
       tetos,
       portfolioTx: transactions,
+      proventos,
       token,
       viewMode,
       refreshSeconds,
@@ -3337,15 +3358,241 @@ const OptMath = (function(){
       else dropped++;
     });
 
+    const prov = sanitizeProventos(d.proventos);
+    dropped += prov.dropped;
+
     return {
       watchlist: wl,
       positions: pos,
       tetos: sanitizeTetos(d.tetos),
       transactions: txs,
+      proventos: prov.rows,
       token: typeof d.token === 'string' ? d.token.trim().slice(0, 200) : '',
       viewMode: d.viewMode === 'table' ? 'table' : 'cards',
       dropped: dropped
     };
+  }
+
+  // Proventos recebidos (relatório da B3). A deduplicação usa a linha inteira:
+  // o mesmo ticker, data e tipo podem aparecer mais de uma vez com valores diferentes.
+  const PROV_HEADERS = ['Produto', 'Pagamento', 'Tipo de Evento', 'Instituição', 'Quantidade', 'Preço unitário', 'Valor líquido'];
+
+  function provCellText(v){
+    if (v == null) return '';
+    return String(v).trim();
+  }
+
+  function parseBrNumber(v){
+    if (typeof v === 'number' && isFinite(v)) return v;
+    if (typeof v !== 'string') return null;
+    const s = v.trim();
+    if (!s) return null;
+    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s) || /^-?\d+,\d+$/.test(s)) return Number(s.replace(/\./g, '').replace(',', '.'));
+    if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
+    return null;
+  }
+
+  function excelSerialToIso(serial){
+    const utc = Date.UTC(1899, 11, 30) + Math.round(serial) * 86400000;
+    const d = new Date(utc);
+    const y = d.getUTCFullYear();
+    const m = d.getUTCMonth() + 1;
+    const day = d.getUTCDate();
+    if (y < 1990 || y > 2100) return null;
+    return y + '-' + String(m).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+  }
+
+  function parsePagamento(v){
+    if (typeof v === 'number' && isFinite(v)) return excelSerialToIso(v);
+    if (typeof v !== 'string') return null;
+    const m = v.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!m) return null;
+    const day = Number(m[1]), month = Number(m[2]), year = Number(m[3]);
+    if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1990 || year > 2100) return null;
+    const dt = new Date(Date.UTC(year, month - 1, day));
+    if (dt.getUTCFullYear() !== year || dt.getUTCMonth() !== month - 1 || dt.getUTCDate() !== day) return null;
+    return year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+  }
+
+  function tickerFromProduto(produto){
+    const s = provCellText(produto);
+    const cut = s.indexOf(' - ');
+    if (cut < 1) return '';
+    return s.slice(0, cut).trim().toUpperCase();
+  }
+
+  function provKey(r){
+    return [r.produto, r.pagamento, r.tipo, r.instituicao, r.quantidade, String(r.preco), String(r.valor)].join('\u0001');
+  }
+
+  function classeProvento(tipo){
+    const t = String(tipo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    if (t.includes('juros sobre capital') || t === 'jcp') return 'jcp';
+    if (t.includes('dividendo')) return 'dividendo';
+    return 'outro';
+  }
+
+  function sanitizeProventos(src){
+    const out = [];
+    const seen = new Set();
+    let dropped = 0;
+    (Array.isArray(src) ? src : []).forEach(r => {
+      if (!r || typeof r !== 'object'){ dropped++; return; }
+      const produto = typeof r.produto === 'string' ? r.produto.trim().slice(0, 200) : '';
+      const ticker = typeof r.ticker === 'string' ? r.ticker.trim().toUpperCase() : '';
+      const pagamento = typeof r.pagamento === 'string' ? r.pagamento : '';
+      const tipo = typeof r.tipo === 'string' ? r.tipo.trim().slice(0, 80) : '';
+      const instituicao = typeof r.instituicao === 'string' ? r.instituicao.trim().slice(0, 120) : '';
+      const quantidade = typeof r.quantidade === 'string' ? r.quantidade.trim().slice(0, 40) : '';
+      const preco = (typeof r.preco === 'number' && isFinite(r.preco)) ? r.preco : null;
+      const valor = (typeof r.valor === 'number' && isFinite(r.valor)) ? r.valor : null;
+      if (!produto || !LIST_TICKER_RE.test(ticker) || !DAY_RE.test(pagamento) || !tipo || !quantidade || preco === null || valor === null || tickerFromProduto(produto) !== ticker){
+        dropped++;
+        return;
+      }
+      const row = { produto, ticker, pagamento, tipo, instituicao, quantidade, preco, valor };
+      const key = provKey(row);
+      if (seen.has(key)){ dropped++; return; }
+      seen.add(key);
+      out.push(row);
+    });
+    return { rows: out, dropped };
+  }
+
+  function rowsFromProventosSheet(grid){
+    let header = -1;
+    const col = {};
+    for (let r = 0; r < grid.length && r < 40; r++){
+      const line = grid[r] || [];
+      const found = {};
+      line.forEach((cell, i) => {
+        const text = provCellText(cell);
+        if (PROV_HEADERS.includes(text) && found[text] == null) found[text] = i;
+      });
+      if (PROV_HEADERS.every(h => found[h] != null)){
+        header = r;
+        PROV_HEADERS.forEach(h => { col[h] = found[h]; });
+        break;
+      }
+    }
+    if (header < 0) throw new Error('cabeçalho não encontrado');
+    const rows = [];
+    let skipped = 0;
+    for (let r = header + 1; r < grid.length; r++){
+      const line = grid[r] || [];
+      const produto = provCellText(line[col.Produto]);
+      const pagamentoRaw = line[col.Pagamento];
+      const tipo = provCellText(line[col['Tipo de Evento']]);
+      const instituicao = provCellText(line[col['Instituição']]);
+      const quantidade = provCellText(line[col.Quantidade]);
+      const preco = parseBrNumber(line[col['Preço unitário']]);
+      const valor = parseBrNumber(line[col['Valor líquido']]);
+      const ticker = tickerFromProduto(produto);
+      const pagamento = parsePagamento(pagamentoRaw);
+      const blank = !produto && provCellText(pagamentoRaw) === '' && !tipo && !quantidade && preco === null && valor === null;
+      if (blank) continue;
+      if (!LIST_TICKER_RE.test(ticker) || !pagamento || !tipo || !quantidade || preco === null || valor === null){
+        skipped++;
+        continue;
+      }
+      rows.push({
+        produto: produto.slice(0, 200),
+        ticker,
+        pagamento,
+        tipo: tipo.slice(0, 80),
+        instituicao: instituicao.slice(0, 120),
+        quantidade: quantidade.slice(0, 40),
+        preco,
+        valor
+      });
+    }
+    return { rows, skipped };
+  }
+
+  function mergeProventos(incoming){
+    const seen = new Set(proventos.map(provKey));
+    let added = 0, dup = 0;
+    incoming.forEach(row => {
+      const key = provKey(row);
+      if (seen.has(key)){ dup++; return; }
+      seen.add(key);
+      proventos.push(row);
+      added++;
+    });
+    return { added, dup };
+  }
+
+  function setProvStatus(msg){ provStatusEl.textContent = msg; }
+
+  async function importProventosFiles(files){
+    if (!files || !files.length) return;
+    if (!window.XlsxLite){
+      setProvStatus('Não foi possível ler .xlsx neste navegador.');
+      return;
+    }
+    let added = 0, dup = 0, skipped = 0, ok = 0;
+    const errors = [];
+    for (const file of files){
+      try{
+        const buf = await file.arrayBuffer();
+        const grid = await XlsxLite.sheet(buf, 'Proventos Recebidos');
+        const parsed = rowsFromProventosSheet(grid);
+        const merged = mergeProventos(parsed.rows);
+        added += merged.added;
+        dup += merged.dup;
+        skipped += parsed.skipped;
+        ok++;
+      }catch(e){
+        errors.push((file.name || 'arquivo') + ': ' + (e && e.message ? e.message : 'não foi possível ler'));
+      }
+    }
+    if (ok){
+      saveState();
+      renderSales();
+    }
+    const parts = [];
+    if (ok) parts.push(added + (added === 1 ? ' provento novo' : ' proventos novos'));
+    if (dup) parts.push(dup + (dup === 1 ? ' repetido ignorado' : ' repetidos ignorados'));
+    if (skipped) parts.push(skipped + (skipped === 1 ? ' linha sem data ou código' : ' linhas sem data ou código'));
+    if (errors.length) parts.push(errors.join(' · '));
+    setProvStatus(parts.join(' · ') + (proventos.length ? ' · ' + proventos.length + ' no total.' : ''));
+  }
+
+  function clearProventos(){
+    if (!proventos.length){
+      setProvStatus('Não há proventos para apagar.');
+      return;
+    }
+    if (!window.confirm('Apagar todos os proventos importados neste navegador? O backup JSON que você já guardou não é alterado.')) return;
+    proventos = [];
+    saveState();
+    renderSales();
+    setProvStatus('Proventos apagados deste navegador.');
+  }
+
+  function renderProventosAno(ano){
+    if (!proventos.length){
+      salesYearProvEl.textContent = 'Proventos recebidos: —';
+      return;
+    }
+    const lista = proventos.filter(p => p.pagamento.slice(0, 4) === ano);
+    if (!lista.length){
+      salesYearProvEl.textContent = 'Proventos recebidos em ' + ano + ': —';
+      return;
+    }
+    let div = 0, jcp = 0, outro = 0;
+    lista.forEach(p => {
+      const c = classeProvento(p.tipo);
+      if (c === 'dividendo') div += p.valor;
+      else if (c === 'jcp') jcp += p.valor;
+      else outro += p.valor;
+    });
+    const partes = [];
+    if (div) partes.push('Dividendos ' + fmtMoney(div));
+    if (jcp) partes.push('JCP ' + fmtMoney(jcp));
+    if (outro) partes.push('outros ' + fmtMoney(outro));
+    salesYearProvEl.textContent = 'Proventos recebidos em ' + ano + ': ' + fmtMoney(div + jcp + outro)
+      + (partes.length ? ' · ' + partes.join(' · ') : '');
   }
 
   // Preço teto por ativo: só tickers válidos e números positivos.
@@ -3371,6 +3618,7 @@ const OptMath = (function(){
         positions = s.positions;
         tetos = s.tetos;
         transactions = s.transactions;
+        proventos = s.proventos;
         token = s.token;
         viewMode = s.viewMode;
         refreshSeconds = normRefresh(d.refreshSeconds);
@@ -3838,6 +4086,7 @@ const OptMath = (function(){
         + ' · imposto somado mês a mês, sem compensar prejuízos de meses anteriores'
         + (anoSemCusto ? ' · há venda sem preço médio' : '');
     }
+    renderProventosAno(ano);
 
     // lista de vendas do mês (todas, com marcação das que ficam fora do limite)
     if (doMes.length === 0){
@@ -4076,6 +4325,13 @@ const OptMath = (function(){
     if (file) importBackupFile(file);
     e.target.value = '';
   });
+  provImportBtn.addEventListener('click', ()=> provImportInput.click());
+  provImportInput.addEventListener('change', (e)=>{
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    e.target.value = '';
+    importProventosFiles(files);
+  });
+  provClearBtn.addEventListener('click', clearProventos);
   saveSettings.addEventListener('click', ()=>{
     token = tokenInput.value.trim();
     refreshSeconds = normRefresh(parseInt(intervalSelect.value, 10));
@@ -4573,6 +4829,7 @@ const OptMath = (function(){
         positions = d.positions || {};
         tetos = sanitizeTetos(d.tetos);
         transactions = Array.isArray(d.portfolioTx) ? d.portfolioTx : [];
+        proventos = sanitizeProventos(d.proventos).rows;
         token = d.token || '';
         viewMode = d.viewMode || 'cards';
         refreshSeconds = normRefresh(d.refreshSeconds);
