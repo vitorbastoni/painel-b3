@@ -772,16 +772,6 @@
   .desp-aportes{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px 16px;margin:0 0 8px;}
   .desp-aportes-nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px;}
   .desp-aportes-nums .summary-value{font-size:18px;}
-  .desp-meses{margin-top:14px;display:flex;flex-direction:column;gap:8px;}
-  .desp-mes{display:grid;grid-template-columns:32px 1fr 120px;gap:8px;align-items:center;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);}
-  .desp-mes .num{text-align:right;}
-  .desp-mes-track{height:8px;border-radius:100px;background:var(--surface-2);overflow:hidden;min-width:0;}
-  .desp-mes-fill{display:block;height:100%;border-radius:100px;background:var(--amber);}
-  .desp-mes-fill.down{background:var(--red);}
-  @media (max-width:640px){
-    .desp-aportes-nums{grid-template-columns:1fr;}
-    .desp-mes{grid-template-columns:32px 1fr 96px;}
-  }
   .sales-bar{height:8px;border-radius:100px;background:var(--surface-2);border:1px solid var(--border);overflow:hidden;margin:4px 0 2px;}
   .sales-bar-fill{height:100%;width:0;background:var(--green);border-radius:100px;transition:width .25s ease;}
   .sales-bar-fill.warn{background:var(--amber);}
@@ -798,6 +788,7 @@
     #bdrSummary, #fiiSummary, #etfSummary{margin-top:-10px;}
     .sale-row{grid-template-columns:70px 1fr 130px;}
     .sale-row .sale-qty, .sale-row .sale-price, .sale-row .sale-avg{display:none;}
+    .desp-aportes-nums{grid-template-columns:1fr;}
   }
 
   /* ---------- Identidade visual VB (navy + dourado, cores sólidas) ---------- */
@@ -1380,7 +1371,6 @@
             <span class="summary-value" id="despLiquido">—</span>
           </div>
         </div>
-        <div class="desp-meses" id="despAportesMeses"></div>
       </div>
     </div>
 
@@ -1778,7 +1768,6 @@ const OptMath = (function(){
   const despCompradoEl = document.getElementById('despComprado');
   const despVendidoEl = document.getElementById('despVendido');
   const despLiquidoEl = document.getElementById('despLiquido');
-  const despAportesMesesEl = document.getElementById('despAportesMeses');
   const despCarteiraRsEl = document.getElementById('despCarteiraRs');
   const despCarteiraPctEl = document.getElementById('despCarteiraPct');
   const despCdiPctEl = document.getElementById('despCdiPct');
@@ -3872,18 +3861,13 @@ const OptMath = (function(){
     const start = ano + '-01-01';
     const limite = hoje.slice(0, 4) === String(ano) ? hoje : (ano + '-12-31');
     let comprado = 0, vendido = 0;
-    const porMes = {};
     transactions.forEach(tx => {
       if (!tx || typeof tx.date !== 'string' || tx.date < start || tx.date > limite) return;
       const amt = (Number(tx.qty) || 0) * (Number(tx.price) || 0);
       if (!(amt > 0)) return;
-      const mi = parseInt(tx.date.slice(5, 7), 10);
-      if (!(mi >= 1 && mi <= 12)) return;
-      if (!porMes[mi]) porMes[mi] = 0;
-      if (tx.type === 'compra'){ comprado += amt; porMes[mi] += amt; }
-      else if (tx.type === 'venda'){ vendido += amt; porMes[mi] -= amt; }
+      if (tx.type === 'compra') comprado += amt;
+      else if (tx.type === 'venda') vendido += amt;
     });
-    const liquido = comprado - vendido;
     if (comprado === 0 && vendido === 0){
       despCompradoEl.textContent = '—';
       despCompradoEl.className = 'summary-value';
@@ -3891,29 +3875,15 @@ const OptMath = (function(){
       despVendidoEl.className = 'summary-value';
       despLiquidoEl.textContent = '—';
       despLiquidoEl.className = 'summary-value';
-      despAportesMesesEl.innerHTML = '<p class="desp-note" style="margin:12px 0 0;">Nenhuma compra ou venda neste ano.</p>';
       return;
     }
+    const liquido = comprado - vendido;
     despCompradoEl.textContent = fmtMoney(comprado);
     despCompradoEl.className = 'summary-value';
     despVendidoEl.textContent = fmtMoney(vendido);
     despVendidoEl.className = 'summary-value';
     despLiquidoEl.textContent = fmtMoneySigned(liquido);
     despLiquidoEl.className = 'summary-value ' + despSignClass(liquido);
-    const meses = Object.keys(porMes).map(Number).sort((a, b) => a - b);
-    const max = Math.max.apply(null, meses.map(m => Math.abs(porMes[m]))) || 1;
-    despAportesMesesEl.innerHTML = '';
-    meses.forEach(m => {
-      const net = porMes[m];
-      const row = document.createElement('div');
-      row.className = 'desp-mes';
-      const fill = document.createElement('span');
-      fill.className = 'desp-mes-fill' + (net < 0 ? ' down' : '');
-      fill.style.width = (Math.abs(net) / max * 100).toFixed(1) + '%';
-      row.innerHTML = '<span>' + DESP_MESES[m - 1] + '</span><span class="desp-mes-track"></span><span class="num ' + despSignClass(net) + '">' + fmtMoneySigned(net) + '</span>';
-      row.querySelector('.desp-mes-track').appendChild(fill);
-      despAportesMesesEl.appendChild(row);
-    });
   }
 
   function renderDesempenho(){
