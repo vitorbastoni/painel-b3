@@ -780,14 +780,7 @@
   .desp-chart{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px 10px;margin-bottom:18px;}
   .desp-legend{display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--text-muted);}
   .desp-swatch{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;}
-  .desp-row{display:grid;grid-template-columns:1fr 150px 110px 140px;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border-soft);font-size:13.5px;}
-  .desp-row:last-child{border-bottom:none;}
-  .desp-row .num{text-align:right;font-family:var(--font-mono);}
-  .desp-head{font-family:var(--font-mono);font-size:12px;font-weight:500;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.06em;background:var(--surface-2);}
-  .desp-miss{display:block;margin-top:2px;font-family:var(--font-display);font-size:11px;font-weight:500;color:var(--text-dim);}
   @media (max-width:640px){
-    .desp-row{grid-template-columns:1fr auto auto;gap:8px;padding:12px;}
-    .desp-row .desp-prov{display:none;}
     .desp-manual{grid-template-columns:1fr;}
   }
   .sales-bar{height:8px;border-radius:100px;background:var(--surface-2);border:1px solid var(--border);overflow:hidden;margin:4px 0 2px;}
@@ -1350,7 +1343,7 @@
 
     <div class="tab-panel" id="tabDesempenho" hidden>
       <h3 class="tx-title" id="despTitle" style="margin-top:0;">Desempenho no ano</h3>
-      <p class="desp-note">Método: Dietz modificada. O resultado em R$ junta a variação de valor, o ganho das vendas do ano e os proventos recebidos. O percentual dá mais peso ao dinheiro que ficou mais tempo aplicado. Com os campos vazios, o início é o custo médio em 31/12 do ano anterior e o final é a cotação de hoje. O número que você digitar substitui só esse lado. Compras entram como aporte; vendas e proventos, como resgate. O mesmo capital no CDI usa essa mesma base. No gráfico, o valor final entra só no último ponto. A tabela por ativo continua no custo e na cotação.</p>
+      <p class="desp-note">Método: Dietz modificada. O resultado em R$ junta a variação de valor, o ganho das vendas do ano e os proventos recebidos. O percentual dá mais peso ao dinheiro que ficou mais tempo aplicado. Com os campos vazios, o início é o custo médio em 31/12 do ano anterior e o final é a cotação de hoje. O número que você digitar substitui só esse lado. Compras entram como aporte; vendas e proventos, como resgate. O mesmo capital no CDI usa essa mesma base. No gráfico, o valor final entra só no último ponto.</p>
       <div class="desp-manual">
         <label for="despInicioInput">Valor da carteira em 31/12/2025 (início)
           <input type="number" id="despInicioInput" min="0" step="0.01" inputmode="decimal" placeholder="vazio = custo">
@@ -1390,16 +1383,6 @@
           <span><span class="desp-swatch" style="background:#5aa9e6"></span>CDI</span>
         </div>
       </div>
-      <div class="table-wrap" id="despTable">
-        <div class="desp-row desp-head">
-          <span>Código</span>
-          <span class="num">Resultado</span>
-          <span class="num">Retorno</span>
-          <span class="num desp-prov">Proventos</span>
-        </div>
-        <div id="despRows"></div>
-      </div>
-      <p class="desp-note" id="despTabelaNota" hidden>A tabela acima permanece na base automática (custo e cotação). Um valor único da carteira não se reparte por ativo.</p>
     </div>
 
     <div class="tab-panel" id="tabOpcoes" hidden>
@@ -1794,8 +1777,6 @@ const OptMath = (function(){
   const despWarnEl = document.getElementById('despWarn');
   const despChartBox = document.getElementById('despChartBox');
   const despSvgEl = document.getElementById('despSvg');
-  const despRowsEl = document.getElementById('despRows');
-  const despTableEl = document.getElementById('despTable');
   const despCarteiraRsEl = document.getElementById('despCarteiraRs');
   const despCarteiraPctEl = document.getElementById('despCarteiraPct');
   const despCdiPctEl = document.getElementById('despCdiPct');
@@ -1807,7 +1788,6 @@ const OptMath = (function(){
   const despInicioEl = document.getElementById('despInicioInput');
   const despFimEl = document.getElementById('despFimInput');
   const despBaseEl = document.getElementById('despBase');
-  const despTabelaNotaEl = document.getElementById('despTabelaNota');
   let despInicio = null;
   let despFim = null;
   const provImportBtn = document.getElementById('provImportBtn');
@@ -3800,13 +3780,13 @@ const OptMath = (function(){
       if (!tx || typeof tx.date !== 'string' || tx.date < start || tx.date > end || !tx.ticker) return;
       const amt = (Number(tx.qty) || 0) * (Number(tx.price) || 0);
       if (!(amt > 0)) return;
-      if (tx.type === 'compra') flows.push({ date: tx.date, amount: amt, ticker: tx.ticker, kind: 'compra' });
-      else if (tx.type === 'venda') flows.push({ date: tx.date, amount: -amt, ticker: tx.ticker, kind: 'venda' });
+      if (tx.type === 'compra') flows.push({ date: tx.date, amount: amt });
+      else if (tx.type === 'venda') flows.push({ date: tx.date, amount: -amt });
     });
     proventos.forEach(p => {
       if (!p || typeof p.pagamento !== 'string' || p.pagamento < start || p.pagamento > end) return;
       if (typeof p.valor !== 'number' || !isFinite(p.valor)) return;
-      flows.push({ date: p.pagamento, amount: -p.valor, ticker: p.ticker, kind: 'provento', valor: p.valor });
+      flows.push({ date: p.pagamento, amount: -p.valor });
     });
     return flows;
   }
@@ -3829,35 +3809,30 @@ const OptMath = (function(){
     return { total, sem };
   }
 
-  function despCalc(end, useMarket, ticker, manual){
+  function despCalc(end, useMarket, manual){
     const start = despAno() + '-01-01';
     const ate = end < start ? start : end;
-    const keep = (pos) => {
-      if (!ticker) return pos;
-      return pos[ticker] ? { [ticker]: pos[ticker] } : {};
-    };
-    const b = despValor(keep(despReplay(start, false)), false);
-    const e = despValor(keep(despReplay(ate, true)), useMarket);
-    const flows = despFlows(start, ate).filter(f => !ticker || f.ticker === ticker);
+    const b = despValor(despReplay(start, false), false);
+    const e = despValor(despReplay(ate, true), useMarket);
+    const flows = despFlows(start, ate);
     const cd = Math.max(1, despDays(start, ate));
-    let cf = 0, weighted = 0, prov = 0;
+    let cf = 0, weighted = 0;
     flows.forEach(f => {
       const di = Math.min(cd, Math.max(0, despDays(start, f.date)));
       cf += f.amount;
       weighted += f.amount * ((cd - di) / cd);
-      if (f.kind === 'provento') prov += f.valor;
     });
     let bmv = b.total;
     let emv = e.total;
     let sem = e.sem;
-    const usarV0 = !ticker && manual && manual.v0 != null;
-    const usarV1 = !ticker && useMarket && manual && manual.v1 != null;
+    const usarV0 = !!(manual && manual.v0 != null);
+    const usarV1 = !!(useMarket && manual && manual.v1 != null);
     if (usarV0) bmv = manual.v0;
     if (usarV1){ emv = manual.v1; sem = []; }
     const resultado = emv - bmv - cf;
     const denom = bmv + weighted;
     return {
-      resultado, prov, bmv, emv, sem, flows,
+      resultado, bmv, emv, sem, flows,
       autoBmv: b.total, autoEmv: e.total,
       baseInicio: usarV0 ? 'manual' : 'auto',
       baseFim: usarV1 ? 'manual' : 'auto',
@@ -3983,15 +3958,12 @@ const OptMath = (function(){
     const aberto = Object.keys(pos0).some(t => pos0[t].qty > 0) || Object.keys(posHoje).some(t => posHoje[t].qty > 0);
     const flowsAll = despFlows(start, hoje);
     const temManual = despInicio != null || despFim != null;
-    if (despTabelaNotaEl) despTabelaNotaEl.hidden = !temManual;
     if (!aberto && !flowsAll.length && !temManual){
       despCarteiraRsEl.textContent = '—';
       despCarteiraRsEl.className = 'summary-value';
       setChangeText(despCarteiraPctEl, 0, 'sem lançamentos neste ano');
       despWarnEl.hidden = true;
       despChartBox.hidden = true;
-      despTableEl.hidden = true;
-      despRowsEl.innerHTML = '';
       if (despBaseEl) despBaseEl.textContent = 'Base usada: início automático (custo) · final automático (cotações).';
       despCdiRsEl.textContent = cdiAno.status === 'fail' ? '—' : (cdiAno.status === 'ok' ? fmtMoney(0) : '···');
       despCdiRsEl.className = 'summary-value';
@@ -4009,8 +3981,7 @@ const OptMath = (function(){
       despVsSubEl.textContent = '';
       return;
     }
-    despTableEl.hidden = false;
-    const total = despCalc(hoje, true, null, manual);
+    const total = despCalc(hoje, true, manual);
     if (despBaseEl) despBaseEl.textContent = despTextoBase(total.autoBmv, total.autoEmv, total.baseInicio, total.baseFim);
     despCarteiraRsEl.textContent = fmtMoneySigned(total.resultado);
     despCarteiraRsEl.className = 'summary-value ' + despSignClass(total.resultado);
@@ -4025,34 +3996,12 @@ const OptMath = (function(){
     for (let m = 1; m <= mesAtual; m++){
       const fim = despMonthEnd(ano, m, hoje);
       const noFim = m === mesAtual;
-      const c = despCalc(fim, noFim, null, { v0: despInicio, v1: noFim ? despFim : null });
+      const c = despCalc(fim, noFim, { v0: despInicio, v1: noFim ? despFim : null });
       const cdiPct = cdiAno.status === 'ok' ? (cdiAno.factorOn(fim) - 1) * 100 : null;
       pontos.push({ label: DESP_MESES[m - 1], cart: c.pct, cdi: cdiPct });
     }
     despChartBox.hidden = false;
     drawDespChart(pontos);
-
-    const tickers = new Set();
-    Object.keys(posHoje).forEach(t => { if (posHoje[t].qty > 0) tickers.add(t); });
-    Object.keys(pos0).forEach(t => { if (pos0[t].qty > 0) tickers.add(t); });
-    flowsAll.forEach(f => { if (f.ticker) tickers.add(f.ticker); });
-    const linhas = Array.from(tickers).map(t => Object.assign({ ticker: t }, despCalc(hoje, true, t)))
-      .sort((a, b) => Math.abs(b.resultado) - Math.abs(a.resultado));
-    despRowsEl.innerHTML = '';
-    if (!linhas.length){
-      despRowsEl.innerHTML = '<div class="tx-empty">Nenhum ativo neste ano.</div>';
-    } else {
-      linhas.forEach(r => {
-        const row = document.createElement('div');
-        row.className = 'desp-row';
-        const miss = r.sem.indexOf(r.ticker) >= 0 ? '<span class="desp-miss">sem cotação</span>' : '';
-        row.innerHTML = '<span><span class="pos-ticker">' + esc(r.ticker) + '</span>' + miss + '</span>'
-          + '<span class="num ' + despSignClass(r.resultado) + '">' + fmtMoneySigned(r.resultado) + '</span>'
-          + '<span class="num ' + despSignClass(r.pct || 0) + '">' + (r.pct == null ? '—' : fmtPct(r.pct)) + '</span>'
-          + '<span class="num desp-prov">' + (r.prov ? fmtMoney(r.prov) : '—') + '</span>';
-        despRowsEl.appendChild(row);
-      });
-    }
 
     if (cdiAno.status === 'loading'){
       despCdiPctEl.textContent = '···';
