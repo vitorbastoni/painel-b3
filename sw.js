@@ -4,7 +4,7 @@
    sempre buscados na rede e nunca gravados neste cache. */
 'use strict';
 
-var VERSION = '5';
+var VERSION = '6';
 var SHELL_CACHE = 'painel-b3-shell-v' + VERSION;
 
 var SHELL = [
