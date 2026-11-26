@@ -753,7 +753,13 @@
   .sales-total{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid rgba(214,178,96,0.45);border-radius:10px;padding:14px 18px;margin:-6px 0 18px;}
   .sales-total-text{display:flex;flex-direction:column;gap:5px;}
   .sales-total-value{font-family:var(--font-mono);font-size:22px;font-weight:600;color:var(--amber);}
-  .sales-year{margin:0 0 10px;}
+  .sales-year{margin:0 0 10px;flex-direction:column;align-items:stretch;gap:10px;}
+  .sales-year-headline{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .sales-year-total-value{font-family:var(--font-mono);font-size:30px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums;}
+  .sales-year-total-value.up{color:var(--green);}
+  .sales-year-total-value.down{color:var(--red);}
+  .sales-year-total-value.flat{color:var(--text-muted);}
+  .sales-year-body{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding-top:10px;border-top:1px solid var(--border-soft);}
   .sales-year .sales-total-value.up{color:var(--green);}
   .sales-year .sales-total-value.down{color:var(--red);}
   .sales-year .sales-total-value.flat{color:var(--text-muted);}
@@ -777,6 +783,9 @@
     #salesSummary, #bdrSummary, #fiiSummary, #etfSummary{grid-template-columns:1fr;}
     #bdrSummary, #fiiSummary, #etfSummary{margin-top:-10px;}
     .sale-row{grid-template-columns:70px 1fr 130px;}
+    .sales-year-total-value{font-size:24px;}
+    .sales-year .sales-total-value{font-size:16px;}
+    .sales-year-body{align-items:flex-start;}
     .sale-row .sale-qty, .sale-row .sale-price, .sale-row .sale-avg{display:none;}
   }
 
@@ -1282,13 +1291,19 @@
         <span class="sales-total-value" id="salesTotalTax">—</span>
       </div>
       <div class="sales-total sales-year" id="salesYearBox">
-        <div class="sales-total-text">
-          <span class="summary-label" id="salesYearLabel">Resultado líquido das operações no ano</span>
-          <span class="summary-change flat" id="salesYearSub"></span>
-          <span class="summary-change flat" id="salesYearSub2"></span>
-          <span class="sales-year-prov" id="salesYearProv">Proventos recebidos: —</span>
+        <div class="sales-year-headline">
+          <span class="summary-label" id="salesYearTotalLabel">Resultado total (com proventos)</span>
+          <span class="sales-year-total-value flat" id="salesYearTotal">—</span>
         </div>
-        <span class="sales-total-value" id="salesYearValue">—</span>
+        <div class="sales-year-body">
+          <div class="sales-total-text">
+            <span class="summary-label" id="salesYearLabel">Resultado líquido das operações no ano</span>
+            <span class="summary-change flat" id="salesYearSub"></span>
+            <span class="summary-change flat" id="salesYearSub2"></span>
+            <span class="sales-year-prov" id="salesYearProv">Proventos recebidos: —</span>
+          </div>
+          <span class="sales-total-value" id="salesYearValue">—</span>
+        </div>
       </div>
       <div class="prov-actions">
         <button type="button" id="provImportBtn">Importar proventos (.xlsx)</button>
@@ -1696,6 +1711,7 @@ const OptMath = (function(){
   const salesYearSub2El = document.getElementById('salesYearSub2');
   const salesYearProvEl = document.getElementById('salesYearProv');
   const salesYearValueEl = document.getElementById('salesYearValue');
+  const salesYearTotalEl = document.getElementById('salesYearTotal');
   const provImportBtn = document.getElementById('provImportBtn');
   const provClearBtn = document.getElementById('provClearBtn');
   const provImportInput = document.getElementById('provImportInput');
@@ -3595,6 +3611,28 @@ const OptMath = (function(){
       + (partes.length ? ' · ' + partes.join(' · ') : '');
   }
 
+  function somaProventosAno(ano){
+    let total = 0;
+    proventos.forEach(p => {
+      if (p.pagamento.slice(0, 4) === ano) total += p.valor;
+    });
+    return total;
+  }
+
+  // Soma de exibição: o líquido das operações (ou zero, se não houve venda) mais os proventos do ano.
+  // Não entra no imposto nem no DARF.
+  function renderResultadoTotal(ano, liquido){
+    const prov = somaProventosAno(ano);
+    if (liquido == null && prov === 0){
+      salesYearTotalEl.textContent = '—';
+      salesYearTotalEl.className = 'sales-year-total-value flat';
+      return;
+    }
+    const total = (liquido || 0) + prov;
+    salesYearTotalEl.textContent = fmtMoneySigned(total);
+    salesYearTotalEl.className = 'sales-year-total-value ' + (total > 0 ? 'up' : total < 0 ? 'down' : 'flat');
+  }
+
   // Preço teto por ativo: só tickers válidos e números positivos.
   function sanitizeTetos(src){
     const out = {};
@@ -4064,6 +4102,7 @@ const OptMath = (function(){
       && (isAcaoTicker(sv.ticker) || isBdrTicker(sv.ticker) || isFiiTicker(sv.ticker) || isEtfTicker(sv.ticker)));
     salesYearLabelEl.textContent = 'Resultado líquido das operações em ' + ano + ' (após impostos estimados)';
     [salesYearSubEl, salesYearSub2El].forEach(el => { el.classList.remove('up','down','flat'); el.classList.add('flat'); });
+    let liquidoAno = null;
     if (doAno.length === 0){
       salesYearValueEl.textContent = '—';
       salesYearValueEl.className = 'sales-total-value flat';
@@ -4076,7 +4115,7 @@ const OptMath = (function(){
       const porMes = {};
       doAno.forEach(sv => { (porMes[sv.date.slice(0, 7)] = porMes[sv.date.slice(0, 7)] || []).push(sv); });
       const impostoAno = Object.keys(porMes).reduce((acc, m) => acc + impostoDoMes(porMes[m]), 0);
-      const liquidoAno = brutoAno - impostoAno;
+      liquidoAno = brutoAno - impostoAno;
       const anoSemCusto = doAno.some(sv => sv.resultado === null);
       salesYearValueEl.textContent = fmtMoneySigned(liquidoAno);
       salesYearValueEl.className = 'sales-total-value ' + (liquidoAno > 0 ? 'up' : liquidoAno < 0 ? 'down' : 'flat');
@@ -4087,6 +4126,7 @@ const OptMath = (function(){
         + (anoSemCusto ? ' · há venda sem preço médio' : '');
     }
     renderProventosAno(ano);
+    renderResultadoTotal(ano, liquidoAno);
 
     // lista de vendas do mês (todas, com marcação das que ficam fora do limite)
     if (doMes.length === 0){
